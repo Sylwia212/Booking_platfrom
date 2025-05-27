@@ -1,7 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Przykładowe wywołanie API
-    fetch('/api/status')
-        .then(response => response.json())
+    
+    fetch('/api/status') 
+        .then(response => {
+            if (!response.ok) {
+                
+                console.error(`Błąd HTTP dla /api/status: ${response.status}`);
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             document.getElementById('api-data').innerText = data.message;
         })
@@ -10,9 +17,15 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Błąd wywołania Booking-API:', error);
         });
 
-    // Przykładowe wywołanie Core Service (przez API Gateway)
-    fetch('/api/core/status') // Zakładamy, że API Gateway przekieruje to do Core Service
-        .then(response => response.json())
+    fetch('/api/core/status') 
+        .then(response => {
+            if (!response.ok) {
+                
+                console.error(`Błąd HTTP dla /api/core/status: ${response.status}`);
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             document.getElementById('core-service-status').innerText = data.message;
         })
