@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  # Frontend Service
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-gateway
+    networks:
+      - booking-network
+    environment:
+      - NODE_ENV=development
+      - API_BASE_URL=http://api-gateway:8000
+
+  # API Gateway
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8000:8000"
+    depends_on:
+      - booking-service
+      - user-service
+      - rabbitmq
+    networks:
+      - booking-network
+    environment:
+      - BOOKING_SERVICE_URL=http://booking-service:5000
+      - USER_SERVICE_URL=http://user-service:8080
+      - RABBITMQ_URL=amqp://rabbitmq
+
+  # Booking Service
+  booking-service:
+    build: ./booking-service
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - booking-network
+    environment:
+      - DB_URL=postgresql://postgres:postgres@postgres:5432/booking_db
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://rabbitmq
+    volumes:
+      - booking-data:/var/lib/postgresql/data
+
+  # User Service
+  user-service:
+    build: ./user-service
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - booking-network
+    environment:
+      - DB_URL=jdbc:postgresql://postgres:5432/user_db
+      - JWT_SECRET=secret_key_here
+
+  # Notification Service
+  notification-service:
+    build: ./notification-service
+    depends_on:
+      - rabbitmq
+    networks:
+      - booking-network
+    environment:
+      - RABBITMQ_URL=amqp://rabbitmq
+
+  # Database
+  postgres:
+    image: postgres:13-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - booking-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis
+  redis:
+    image: redis:6-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - booking-network
+    volumes:
+      - redis-data:/data
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"  # AMQP
+      - "15672:15672"  # Management UI
+    networks:
+      - booking-network
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin
+
+networks:
+  booking-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  booking-data:
