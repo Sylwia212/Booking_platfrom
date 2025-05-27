@@ -1,0 +1,15 @@
+{
+  "name": "booking-api",
+  "version": "1.0.0",
+  "description": "Main API Gateway for Booking Platform",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "node-fetch": "^2.7.0",
+    "pg": "^8.11.5",
+    "redis": "^4.6.14"
+  }
+}
