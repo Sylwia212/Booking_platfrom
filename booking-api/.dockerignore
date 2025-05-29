@@ -1,9 +1,34 @@
-node_modules/
+# Zależności i logi Node.js
+node_modules
 npm-debug.log
+yarn-error.log
+
+# Pliki systemowe i edytora
 .DS_Store
-.git/
-.gitignore
+.idea/
 .vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Pliki konfiguracyjne środowiska - nie powinny być w obrazie
 *.env
+.env.*
+!/.env.example # Jeśli masz plik przykładowy, możesz go dołączyć
+
+# Pliki Git
+.git
+.gitignore
+
+# Pliki Docker
 Dockerfile
 docker-compose.yml
+docker-compose.*.yml
+
+# Inne pliki tymczasowe lub specyficzne dla projektu
+coverage/
+dist/ # Jeśli katalog dist jest generowany lokalnie, a nie w Dockerfile
+build/ # Podobnie jak dist
+
+# Pliki systemowe specyficzne dla OS
+Thumbs.db
+ehthumbs.db

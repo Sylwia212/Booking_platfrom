@@ -4,12 +4,16 @@
   "description": "Core business logic for Booking Platform",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "dev": "nodemon src/server.js"
   },
   "dependencies": {
     "express": "^4.19.2",
     "amqplib": "^0.10.3",
     "pg": "^8.11.5",
     "redis": "^4.6.14"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1" 
   }
 }

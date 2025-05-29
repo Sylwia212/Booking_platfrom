@@ -1,23 +1,53 @@
-FROM node:18-alpine AS builder
+# Etap budowania (builder stage)
+FROM node:20-alpine AS builder
+LABEL stage="builder"
+
+# Ustawienie środowiska - ARG NODE_ENV jest przekazywane z docker-compose.yml
+ARG NODE_ENV=production
+ENV NODE_ENV=${NODE_ENV}
 
 WORKDIR /app
 
-COPY package*.json ./
+# Kopiuj pliki manifestu aplikacji
+COPY package.json package-lock.json* ./
 
-RUN npm install --omit=dev
+# Zainstaluj zależności produkcyjne używając npm ci
+RUN npm ci --omit=dev
 
-COPY . .
+# Kopiuj resztę kodu aplikacji
+COPY ./src ./src
 
-FROM node:18-alpine
+
+# Etap produkcyjny (production stage)
+FROM node:20-alpine AS production
+LABEL stage="production"
+
+# Ustawienie środowiska
+ARG NODE_ENV=production
+ENV NODE_ENV=${NODE_ENV}
+ENV PORT=3001 
 
 WORKDIR /app
 
-COPY --from=builder /app/node_modules ./node_modules
+# Utwórz użytkownika i grupę aplikacji dla bezpieczeństwa
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-COPY --from=builder /app/package.json ./package.json
+# Zainstaluj curl dla healthcheck (wymagany przez Twój docker-compose.yml)
+RUN apk add --no-cache curl
 
-COPY --from=builder /app/src ./src
+# Kopiuj zależności z etapu buildera
+COPY --from=builder --chown=appuser:appgroup /app/node_modules ./node_modules
 
-EXPOSE 3000
+# Kopiuj pliki manifestu aplikacji
+COPY --from=builder --chown=appuser:appgroup /app/package.json ./package.json
+COPY --from=builder --chown=appuser:appgroup /app/package-lock.json* ./package-lock.json*
 
-CMD ["npm", "start"]
+# Kopiuj kod aplikacji z etapu buildera - TO BYŁ KLUCZOWY BŁĄD W POPRZEDNIEJ WERSJI
+COPY --from=builder --chown=appuser:appgroup /app/src ./src
+
+# Ustaw użytkownika aplikacji
+USER appuser
+
+EXPOSE ${PORT}
+
+CMD ["node", "src/index.js"]

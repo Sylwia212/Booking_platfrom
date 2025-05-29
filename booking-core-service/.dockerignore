@@ -1,4 +1,34 @@
+# Zależności i logi Node.js
 node_modules
 npm-debug.log
+yarn-error.log
+
+# Pliki systemowe i edytora
+.DS_Store
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Pliki konfiguracyjne środowiska - nie powinny być w obrazie
+*.env
+.env.*
+!/.env.example
+
+# Pliki Git
 .git
 .gitignore
+
+# Pliki Docker
+Dockerfile
+docker-compose.yml
+docker-compose.*.yml
+
+# Inne pliki tymczasowe lub specyficzne dla projektu
+coverage/
+dist/
+build/
+
+# Pliki systemowe specyficzne dla OS
+Thumbs.db
+ehthumbs.db
