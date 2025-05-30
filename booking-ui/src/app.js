@@ -1,12 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
-        
+    
     const contentArea = document.getElementById('content-area');
     const homeView = document.getElementById('home-view');
     const offersView = document.getElementById('offers-view');
     const registerView = document.getElementById('register-view');
     const loginView = document.getElementById('login-view');
     const bookingView = document.getElementById('booking-view');
-
 
     const navHome = document.getElementById('nav-home');
     const navOffers = document.getElementById('nav-offers');
@@ -30,10 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const bookingForm = document.getElementById('booking-form');
     const bookingMessage = document.getElementById('booking-message');
 
-   
+    
+    const offersGrid = document.querySelector('#offers-view .offers-grid');
+
     let currentUser = null; 
     
-   
     function hideAllViews() {
         if(homeView) homeView.style.display = 'none';
         if(offersView) offersView.style.display = 'none';
@@ -47,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if(viewElement) viewElement.style.display = 'block';
     }
 
-
     if(navHome) navHome.addEventListener('click', (e) => {
         e.preventDefault();
         showView(homeView);
@@ -56,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(navOffers) navOffers.addEventListener('click', (e) => {
         e.preventDefault();
         showView(offersView);
-        
+        loadOffers(); 
     });
 
     if(registerBtn) registerBtn.addEventListener('click', () => showView(registerView));
@@ -69,9 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('userId'); 
         updateUserUI();
         showView(homeView);
-       
     });
-
     
     function updateUserUI() {
         if (currentUser && currentUser.email) {
@@ -85,7 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-   
     function checkLoginStatus() {
         const token = localStorage.getItem('authToken');
         const email = localStorage.getItem('userEmail');
@@ -93,7 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (token && email) {
             currentUser = { email: email, token: token, id: userId }; 
-           
         } else {
             currentUser = null; 
         }
@@ -106,12 +101,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if(registerMessage) registerMessage.textContent = '';
             const emailInput = document.getElementById('reg-email');
             const passwordInput = document.getElementById('reg-password');
-            
             if (!emailInput || !passwordInput) return;
-
             const email = emailInput.value;
             const password = passwordInput.value;
-
             try {
                 const response = await fetch('/api/users/register', {
                     method: 'POST',
@@ -119,7 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({ email, password })
                 });
                 const data = await response.json();
-
                 if (response.ok) { 
                     if(registerMessage) {
                         registerMessage.textContent = `Rejestracja pomyślna! Użytkownik: ${data.user.email}. Możesz się teraz zalogować.`;
@@ -142,7 +133,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
     
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
@@ -150,12 +140,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if(loginMessage) loginMessage.textContent = '';
             const emailInput = document.getElementById('login-email');
             const passwordInput = document.getElementById('login-password');
-
             if (!emailInput || !passwordInput) return;
-
             const email = emailInput.value;
             const password = passwordInput.value;
-
             try {
                 const response = await fetch('/api/users/login', {
                     method: 'POST',
@@ -163,14 +150,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({ email, password })
                 });
                 const data = await response.json();
-
                 if (response.ok) { 
                     if(loginMessage) {
                         loginMessage.textContent = 'Logowanie pomyślne!';
                         loginMessage.style.color = 'green';
                     }
-                    
-                    if (data.user && data.user.email && data.token) {
+                    if (data.user && data.user.email && data.token && data.user.id) { 
                         currentUser = { email: data.user.email, token: data.token, id: data.user.id }; 
                         localStorage.setItem('authToken', data.token); 
                         localStorage.setItem('userEmail', data.user.email);
@@ -179,6 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         showView(homeView); 
                         loginForm.reset();
                     } else {
+                        console.error("Odpowiedź serwera logowania nie zawiera wszystkich wymaganych pól (user.id, user.email, token):", data);
                         throw new Error("Niekompletne dane logowania z serwera.");
                     }
                 } else {
@@ -202,46 +188,105 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+
+    async function loadOffers() {
+        if (!offersGrid) {
+            console.error("Element .offers-grid nie znaleziony w #offers-view!");
+            if(offersView) offersView.innerHTML = "<p>Błąd konfiguracji: Brak kontenera na oferty.</p>";
+            return;
+        }
+        offersGrid.innerHTML = '<p>Ładowanie apartamentów...</p>';
+        try {
+            const response = await fetch('/api/core/items');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: `HTTP error ${response.status}` }));
+                throw new Error(errorData.message || `Nie udało się pobrać ofert: ${response.statusText}`);
+            }
+            const items = await response.json();
+            renderOffers(items); 
+        } catch (error) {
+            console.error('Błąd podczas ładowania ofert:', error);
+            offersGrid.innerHTML = `<p>Nie udało się załadować ofert apartamentów. Błąd: ${error.message}</p>`;
+        }
+    }
+
+    function renderOffers(items) {
+        if (!offersGrid) return;
+        offersGrid.innerHTML = '';
+
+        if (!items || items.length === 0) {
+            offersGrid.innerHTML = '<p>Obecnie brak dostępnych apartamentów.</p>';
+            return;
+        }
+
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'offer-card';
+            
+            let priceInfo = 'Zapytaj o cenę';
+            if (item.pricePerNight) {
+                priceInfo = `${item.pricePerNight} ${item.currency || ''} / noc`;
+            } else if (item.pricePerHour) {
+                priceInfo = `${item.pricePerHour} ${item.currency || ''} / godzina`;
+            } else if (item.pricePerUnit) {
+                priceInfo = `${item.pricePerUnit} ${item.currency || ''} / szt.`;
+            }
+
+            card.innerHTML = `
+                <img src="${item.imageUrl || 'https://placehold.co/300x200/EFEFEF/AAAAAA?text=Apartament'}" alt="${item.name || 'Apartament'}">
+                <h3>${item.name || 'Brak nazwy'}</h3>
+                <p>${item.description || 'Brak opisu.'}</p>
+                <p><strong>Lokalizacja:</strong> ${item.location || 'Nieokreślona'}</p>
+                <p><strong>Cena:</strong> ${priceInfo}</p>
+                <button class="book-now-btn" data-offer-id="${item.id}" data-offer-name="${item.name || 'Apartament'}">Rezerwuj</button>
+            `;
+            offersGrid.appendChild(card);
+        });
+        addEventListenersToBookButtons(); 
+    }
+
     function addEventListenersToBookButtons() {
-        document.querySelectorAll('.book-now-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                if (!currentUser) {
-                    alert('Musisz być zalogowany, aby dokonać rezerwacji.');
-                    showView(loginView);
-                    return;
-                }
-                const offerId = this.dataset.offerId;
-                const offerName = this.dataset.offerName || this.closest('.offer-card').querySelector('h3').textContent;
-                
-                if(bookingOfferIdInput) bookingOfferIdInput.value = offerId;
-                if(bookingOfferNameSpan) bookingOfferNameSpan.textContent = offerName;
-                if(bookingMessage) bookingMessage.textContent = '';
-                if(bookingForm) bookingForm.reset();
-                showView(bookingView);
-            });
+        const buttons = document.querySelectorAll('#offers-view .offer-card .book-now-btn');
+        buttons.forEach(button => {
+            
+            const newButton = button.cloneNode(true);
+            button.parentNode.replaceChild(newButton, button); 
+            
+            newButton.addEventListener('click', handleBookNowClick); 
         });
     }
-    addEventListenersToBookButtons(); 
 
+    function handleBookNowClick() {
+        if (!currentUser) {
+            alert('Musisz być zalogowany, aby dokonać rezerwacji.');
+            showView(loginView);
+            return;
+        }
+        const offerId = this.dataset.offerId;
+        const offerName = this.dataset.offerName; 
+        
+        if(bookingOfferIdInput) bookingOfferIdInput.value = offerId;
+        if(bookingOfferNameSpan) bookingOfferNameSpan.textContent = offerName;
+        if(bookingMessage) bookingMessage.textContent = '';
+        if(bookingForm) bookingForm.reset();
+        showView(bookingView);
+    }
     
     if (bookingForm) {
         bookingForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if(bookingMessage) bookingMessage.textContent = '';
-
             if (!currentUser || !currentUser.token) {
                 if(bookingMessage) {
-                    bookingMessage.textContent = 'Błąd: Musisz być zalogowany, aby dokonać rezerwacji (brak tokenu).';
+                    bookingMessage.textContent = 'Błąd: Musisz być zalogowany (brak tokenu).';
                     bookingMessage.style.color = 'red';
                 }
                 return;
             }
-
             const offerIdInput = document.getElementById('booking-offer-id');
             const dateStartInput = document.getElementById('booking-date-start');
             const dateEndInput = document.getElementById('booking-date-end');
             const guestsInput = document.getElementById('booking-guests');
-
             if (!offerIdInput || !dateStartInput || !dateEndInput || !guestsInput) return;
 
             const offerId = offerIdInput.value;
@@ -250,7 +295,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const guests = guestsInput.value;
             
             const bookingApiUrl = '/api/core/bookings'; 
-
             try {
                 const response = await fetch(bookingApiUrl, {
                     method: 'POST',
@@ -265,17 +309,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         numberOfGuests: parseInt(guests)
                     })
                 });
-
                 const data = await response.json();
-
                 if (response.ok) {
                     if(bookingMessage) {
-                        bookingMessage.textContent = 'Rezerwacja złożona pomyślnie!';
+                        bookingMessage.textContent = `Rezerwacja (${data.booking?.bookingId || ''}) złożona: ${data.message || 'Sukces!'}`;
                         bookingMessage.style.color = 'green';
                     }
                     setTimeout(() => {
                         showView(offersView); 
-                    }, 2000);
+                        loadOffers(); 
+                    }, 3000);
                 } else {
                     if(bookingMessage) {
                         bookingMessage.textContent = `Błąd rezerwacji: ${data.message || response.statusText}`;
@@ -298,27 +341,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (apiDataSpan) {
         fetch('/api/status')
             .then(response => response.ok ? response.json() : Promise.reject(response))
-            .then(data => {
-                apiDataSpan.innerText = data.message;
-            })
-            .catch(error => {
-                apiDataSpan.innerText = 'Błąd API Gateway.';
-                console.error('Błąd Booking-API status:', error);
-            });
+            .then(data => { apiDataSpan.innerText = data.message; })
+            .catch(error => { apiDataSpan.innerText = 'Błąd API Gateway.'; console.error('Błąd Booking-API status:', error); });
     }
-
     if (coreServiceStatusSpan) {
         fetch('/api/core/status')
             .then(response => response.ok ? response.json() : Promise.reject(response))
             .then(data => {
-                coreServiceStatusSpan.innerText = data.message;
+                if (data.dependencies && data.dependencies.database) {
+                    coreServiceStatusSpan.innerText = `Core: ${data.message}, DB: ${data.dependencies.database}, RabbitMQ: ${data.dependencies.rabbitmq}, Redis: ${data.dependencies.redis}`;
+                } else {
+                    coreServiceStatusSpan.innerText = data.message || "Status Core Service nieznany";
+                }
             })
-            .catch(error => {
-                coreServiceStatusSpan.innerText = 'Błąd Core Service.';
-                console.error('Błąd Core Service status:', error);
-            });
+            .catch(error => { coreServiceStatusSpan.innerText = 'Błąd Core Service.'; console.error('Błąd Core Service status:', error); });
     }
-    
     
     checkLoginStatus(); 
     showView(homeView); 
