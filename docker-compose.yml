@@ -15,6 +15,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./user-service/db_init/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     networks:
       - booking-net
     healthcheck:
@@ -68,19 +69,20 @@ services:
     environment:
       PORT: 3000
       CORE_SERVICE_URL: http://booking-core-service:3001
-      DB_HOST: postgresql
-      DB_USER: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_NAME: ${POSTGRES_DB}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+      USER_SERVICE_URL: http://user-service:3003
     depends_on:
       postgresql:
         condition: service_healthy
       redis:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      user-service: 
+        condition: service_healthy
+      booking-core-service: 
         condition: service_healthy
     networks:
       - booking-net
@@ -91,7 +93,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 30s 
 
   booking-core-service:
     build:
@@ -103,7 +105,7 @@ services:
     restart: always
     environment:
       PORT: 3001
-      RABBITMQ_HOST: ${RABBITMQ_HOST} 
+      RABBITMQ_HOST: rabbitmq 
       DB_HOST: postgresql
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
@@ -111,7 +113,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
-      RABBITMQ_USER: ${RABBITMQ_USER} 
+      RABBITMQ_USER: ${RABBITMQ_USER}
       RABBITMQ_PASS: ${RABBITMQ_PASS}
     depends_on:
       postgresql:
@@ -125,10 +127,40 @@ services:
     expose:
       - "3001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api/core/status"] 
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/core/status"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 20s 
+
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: production
+    container_name: user_service_container
+    restart: always
+    environment:
+      PORT: 3003
+      DB_HOST: postgresql
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
+      DB_PORT: 5432
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    networks:
+      - booking-net
+    expose:
+      - "3003"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/api/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   booking-ui:
     build:
@@ -137,17 +169,18 @@ services:
     container_name: booking_ui_container
     restart: always
     ports:
-      - "8080:80"
+      - "8080:80" 
     depends_on:
-      booking-api:
+      booking-api: 
         condition: service_healthy
     networks:
       - booking-net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/"]
+    healthcheck: 
+      test: ["CMD", "curl", "-f", "http://localhost/"] 
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s 
 
 volumes:
   postgres_data:
