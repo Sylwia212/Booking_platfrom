@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Elementy DOM
+        
     const contentArea = document.getElementById('content-area');
     const homeView = document.getElementById('home-view');
     const offersView = document.getElementById('offers-view');
@@ -30,39 +30,43 @@ document.addEventListener('DOMContentLoaded', () => {
     const bookingForm = document.getElementById('booking-form');
     const bookingMessage = document.getElementById('booking-message');
 
+   
     let currentUser = null; 
     
+   
     function hideAllViews() {
-        homeView.style.display = 'none';
-        offersView.style.display = 'none';
-        registerView.style.display = 'none';
-        loginView.style.display = 'none';
-        bookingView.style.display = 'none';
+        if(homeView) homeView.style.display = 'none';
+        if(offersView) offersView.style.display = 'none';
+        if(registerView) registerView.style.display = 'none';
+        if(loginView) loginView.style.display = 'none';
+        if(bookingView) bookingView.style.display = 'none';
     }
 
     function showView(viewElement) {
         hideAllViews();
-        viewElement.style.display = 'block';
+        if(viewElement) viewElement.style.display = 'block';
     }
 
-    navHome.addEventListener('click', (e) => {
+
+    if(navHome) navHome.addEventListener('click', (e) => {
         e.preventDefault();
         showView(homeView);
     });
 
-    navOffers.addEventListener('click', (e) => {
+    if(navOffers) navOffers.addEventListener('click', (e) => {
         e.preventDefault();
         showView(offersView);
         
     });
 
-    registerBtn.addEventListener('click', () => showView(registerView));
-    loginBtn.addEventListener('click', () => showView(loginView));
+    if(registerBtn) registerBtn.addEventListener('click', () => showView(registerView));
+    if(loginBtn) loginBtn.addEventListener('click', () => showView(loginView));
 
-    logoutBtn.addEventListener('click', () => {
+    if(logoutBtn) logoutBtn.addEventListener('click', () => {
         currentUser = null;
         localStorage.removeItem('authToken'); 
         localStorage.removeItem('userEmail');
+        localStorage.removeItem('userId'); 
         updateUserUI();
         showView(homeView);
        
@@ -70,36 +74,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
     
     function updateUserUI() {
-        if (currentUser) {
-            userActions.style.display = 'none';
-            userInfo.style.display = 'inline'; 
-            userEmailSpan.textContent = currentUser.email;
+        if (currentUser && currentUser.email) {
+            if(userActions) userActions.style.display = 'none';
+            if(userInfo) userInfo.style.display = 'inline'; 
+            if(userEmailSpan) userEmailSpan.textContent = currentUser.email;
         } else {
-            userActions.style.display = 'inline';
-            userInfo.style.display = 'none';
-            userEmailSpan.textContent = '';
+            if(userActions) userActions.style.display = 'inline';
+            if(userInfo) userInfo.style.display = 'none';
+            if(userEmailSpan) userEmailSpan.textContent = '';
         }
     }
     
-    
+   
     function checkLoginStatus() {
         const token = localStorage.getItem('authToken');
         const email = localStorage.getItem('userEmail');
+        const userId = localStorage.getItem('userId'); 
+
         if (token && email) {
-            currentUser = { email: email, token: token };
+            currentUser = { email: email, token: token, id: userId }; 
            
+        } else {
+            currentUser = null; 
         }
         updateUserUI();
     }
 
-
-   
     if (registerForm) {
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            registerMessage.textContent = '';
-            const email = document.getElementById('reg-email').value;
-            const password = document.getElementById('reg-password').value;
+            if(registerMessage) registerMessage.textContent = '';
+            const emailInput = document.getElementById('reg-email');
+            const passwordInput = document.getElementById('reg-password');
+            
+            if (!emailInput || !passwordInput) return;
+
+            const email = emailInput.value;
+            const password = passwordInput.value;
 
             try {
                 const response = await fetch('/api/users/register', {
@@ -110,32 +121,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
 
                 if (response.ok) { 
-                    registerMessage.textContent = `Rejestracja pomyślna! Użytkownik: ${data.user.email}. Możesz się teraz zalogować.`;
-                    registerMessage.style.color = 'green';
+                    if(registerMessage) {
+                        registerMessage.textContent = `Rejestracja pomyślna! Użytkownik: ${data.user.email}. Możesz się teraz zalogować.`;
+                        registerMessage.style.color = 'green';
+                    }
                     registerForm.reset();
                     setTimeout(() => showView(loginView), 2000);
                 } else {
-                    registerMessage.textContent = `Błąd rejestracji: ${data.message || response.statusText}`;
-                    registerMessage.style.color = 'red';
+                    if(registerMessage) {
+                        registerMessage.textContent = `Błąd rejestracji: ${data.message || response.statusText}`;
+                        registerMessage.style.color = 'red';
+                    }
                 }
             } catch (error) {
                 console.error('Błąd fetch podczas rejestracji:', error);
-                registerMessage.textContent = 'Wystąpił błąd sieci. Spróbuj ponownie.';
-                registerMessage.style.color = 'red';
+                if(registerMessage) {
+                    registerMessage.textContent = 'Wystąpił błąd sieci. Spróbuj ponownie.';
+                    registerMessage.style.color = 'red';
+                }
             }
         });
     }
 
- 
+    
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            loginMessage.textContent = '';
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
+            if(loginMessage) loginMessage.textContent = '';
+            const emailInput = document.getElementById('login-email');
+            const passwordInput = document.getElementById('login-password');
+
+            if (!emailInput || !passwordInput) return;
+
+            const email = emailInput.value;
+            const password = passwordInput.value;
 
             try {
-               
                 const response = await fetch('/api/users/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -144,62 +165,89 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
 
                 if (response.ok) { 
-                    loginMessage.textContent = 'Logowanie pomyślne!';
-                    loginMessage.style.color = 'green';
-                    currentUser = { email: data.user.email, token: data.token }; 
-                    localStorage.setItem('authToken', data.token); 
-                    localStorage.setItem('userEmail', data.user.email);
-                    updateUserUI();
-                    showView(homeView);
-                    loginForm.reset();
+                    if(loginMessage) {
+                        loginMessage.textContent = 'Logowanie pomyślne!';
+                        loginMessage.style.color = 'green';
+                    }
+                    
+                    if (data.user && data.user.email && data.token) {
+                        currentUser = { email: data.user.email, token: data.token, id: data.user.id }; 
+                        localStorage.setItem('authToken', data.token); 
+                        localStorage.setItem('userEmail', data.user.email);
+                        localStorage.setItem('userId', data.user.id); 
+                        updateUserUI();
+                        showView(homeView); 
+                        loginForm.reset();
+                    } else {
+                        throw new Error("Niekompletne dane logowania z serwera.");
+                    }
                 } else {
-                    loginMessage.textContent = `Błąd logowania: ${data.message || response.statusText}`;
-                    loginMessage.style.color = 'red';
+                    if(loginMessage) {
+                        loginMessage.textContent = `Błąd logowania: ${data.message || response.statusText}`;
+                        loginMessage.style.color = 'red';
+                    }
+                    currentUser = null; 
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('userEmail');
+                    localStorage.removeItem('userId');
+                    updateUserUI();
                 }
             } catch (error) {
                 console.error('Błąd fetch podczas logowania:', error);
-                loginMessage.textContent = 'Wystąpił błąd sieci lub endpoint logowania nie działa. Spróbuj ponownie.';
-                loginMessage.style.color = 'red';
+                if(loginMessage) {
+                    loginMessage.textContent = `Wystąpił błąd: ${error.message}. Sprawdź konsolę.`;
+                    loginMessage.style.color = 'red';
+                }
             }
         });
     }
 
-    
-    document.querySelectorAll('.book-now-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            if (!currentUser) {
-                alert('Musisz być zalogowany, aby dokonać rezerwacji.');
-                showView(loginView);
-                return;
-            }
-            const offerId = this.dataset.offerId;
-            const offerName = this.closest('.offer-card').querySelector('h3').textContent;
-            
-            bookingOfferIdInput.value = offerId;
-            bookingOfferNameSpan.textContent = offerName;
-            bookingMessage.textContent = '';
-            bookingForm.reset();
-            showView(bookingView);
+    function addEventListenersToBookButtons() {
+        document.querySelectorAll('.book-now-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                if (!currentUser) {
+                    alert('Musisz być zalogowany, aby dokonać rezerwacji.');
+                    showView(loginView);
+                    return;
+                }
+                const offerId = this.dataset.offerId;
+                const offerName = this.dataset.offerName || this.closest('.offer-card').querySelector('h3').textContent;
+                
+                if(bookingOfferIdInput) bookingOfferIdInput.value = offerId;
+                if(bookingOfferNameSpan) bookingOfferNameSpan.textContent = offerName;
+                if(bookingMessage) bookingMessage.textContent = '';
+                if(bookingForm) bookingForm.reset();
+                showView(bookingView);
+            });
         });
-    });
+    }
+    addEventListenersToBookButtons(); 
 
-    // --- Formularz Rezerwacji ---
+    
     if (bookingForm) {
         bookingForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            bookingMessage.textContent = '';
+            if(bookingMessage) bookingMessage.textContent = '';
 
             if (!currentUser || !currentUser.token) {
-                bookingMessage.textContent = 'Błąd: Musisz być zalogowany, aby dokonać rezerwacji (brak tokenu).';
-                bookingMessage.style.color = 'red';
+                if(bookingMessage) {
+                    bookingMessage.textContent = 'Błąd: Musisz być zalogowany, aby dokonać rezerwacji (brak tokenu).';
+                    bookingMessage.style.color = 'red';
+                }
                 return;
             }
 
-            const offerId = document.getElementById('booking-offer-id').value;
-            const dateStart = document.getElementById('booking-date-start').value;
-            const dateEnd = document.getElementById('booking-date-end').value;
-            const guests = document.getElementById('booking-guests').value;
-            
+            const offerIdInput = document.getElementById('booking-offer-id');
+            const dateStartInput = document.getElementById('booking-date-start');
+            const dateEndInput = document.getElementById('booking-date-end');
+            const guestsInput = document.getElementById('booking-guests');
+
+            if (!offerIdInput || !dateStartInput || !dateEndInput || !guestsInput) return;
+
+            const offerId = offerIdInput.value;
+            const dateStart = dateStartInput.value;
+            const dateEnd = dateEndInput.value;
+            const guests = guestsInput.value;
             
             const bookingApiUrl = '/api/core/bookings'; 
 
@@ -215,54 +263,63 @@ document.addEventListener('DOMContentLoaded', () => {
                         startDate: dateStart,
                         endDate: dateEnd,
                         numberOfGuests: parseInt(guests)
-                       
                     })
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
-                    bookingMessage.textContent = 'Rezerwacja złożona pomyślnie!';
-                    bookingMessage.style.color = 'green';
+                    if(bookingMessage) {
+                        bookingMessage.textContent = 'Rezerwacja złożona pomyślnie!';
+                        bookingMessage.style.color = 'green';
+                    }
                     setTimeout(() => {
                         showView(offersView); 
                     }, 2000);
                 } else {
-                    bookingMessage.textContent = `Błąd rezerwacji: ${data.message || response.statusText}`;
-                    bookingMessage.style.color = 'red';
+                    if(bookingMessage) {
+                        bookingMessage.textContent = `Błąd rezerwacji: ${data.message || response.statusText}`;
+                        bookingMessage.style.color = 'red';
+                    }
                 }
-
             } catch (error) {
                 console.error('Błąd fetch podczas składania rezerwacji:', error);
-                bookingMessage.textContent = 'Wystąpił błąd sieci podczas składania rezerwacji.';
-                bookingMessage.style.color = 'red';
+                if(bookingMessage) {
+                    bookingMessage.textContent = 'Wystąpił błąd sieci podczas składania rezerwacji.';
+                    bookingMessage.style.color = 'red';
+                }
             }
         });
     }
 
+    const apiDataSpan = document.getElementById('api-data');
+    const coreServiceStatusSpan = document.getElementById('core-service-status');
 
+    if (apiDataSpan) {
+        fetch('/api/status')
+            .then(response => response.ok ? response.json() : Promise.reject(response))
+            .then(data => {
+                apiDataSpan.innerText = data.message;
+            })
+            .catch(error => {
+                apiDataSpan.innerText = 'Błąd API Gateway.';
+                console.error('Błąd Booking-API status:', error);
+            });
+    }
+
+    if (coreServiceStatusSpan) {
+        fetch('/api/core/status')
+            .then(response => response.ok ? response.json() : Promise.reject(response))
+            .then(data => {
+                coreServiceStatusSpan.innerText = data.message;
+            })
+            .catch(error => {
+                coreServiceStatusSpan.innerText = 'Błąd Core Service.';
+                console.error('Błąd Core Service status:', error);
+            });
+    }
     
-    fetch('/api/status')
-        .then(response => response.ok ? response.json() : Promise.reject(response))
-        .then(data => {
-            document.getElementById('api-data').innerText = data.message;
-        })
-        .catch(error => {
-            document.getElementById('api-data').innerText = 'Błąd API Gateway.';
-            console.error('Błąd Booking-API status:', error);
-        });
-
-    fetch('/api/core/status')
-        .then(response => response.ok ? response.json() : Promise.reject(response))
-        .then(data => {
-            document.getElementById('core-service-status').innerText = data.message;
-        })
-        .catch(error => {
-            document.getElementById('core-service-status').innerText = 'Błąd Core Service.';
-            console.error('Błąd Core Service status:', error);
-        });
-
-   
-    checkLoginStatus();
+    
+    checkLoginStatus(); 
     showView(homeView); 
 });
