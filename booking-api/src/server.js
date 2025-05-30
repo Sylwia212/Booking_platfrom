@@ -22,7 +22,7 @@ app.get('/api/core/status', async (req, res) => {
     try {
         const coreServiceUrl = process.env.CORE_SERVICE_URL || 'http://booking-core-service:3001';
         
-        const response = await fetch(`${coreServiceUrl}/status`);
+        const response = await fetch(`${coreServiceUrl}/api/core/status`);
         if (!response.ok) {
            
             throw new Error(`Core Service zwrócił błąd HTTP: ${response.status}`);
