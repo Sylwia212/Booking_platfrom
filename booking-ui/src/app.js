@@ -1,498 +1,70 @@
+import * as dom from './domElements.js';
+import { initAuth, getCurrentUser } from './auth.js';
+import { showView, initNavigation } from './viewManager.js';
+import { loadOffers } from './offers.js'; 
+import { loadMyBookings } from './myBookings.js'; 
+import { initBookingForm } from './booking.js';
+import * as api from './apiService.js'; 
+
 document.addEventListener('DOMContentLoaded', () => {
-    
-    const homeView = document.getElementById('home-view');
-    const offersView = document.getElementById('offers-view');
-    const registerView = document.getElementById('register-view');
-    const loginView = document.getElementById('login-view');
-    const bookingView = document.getElementById('booking-view');
-    const myBookingsView = document.getElementById('my-bookings-view');
-    const myBookingsList = document.getElementById('my-bookings-list');
+    const criticalDOMElements = [
+        dom.homeView, dom.offersView, dom.loginView, dom.registerView, dom.bookingView, dom.myBookingsView,
+        dom.navHome, dom.navOffers, dom.userActions, dom.userInfo, dom.myBookingsBtn, dom.logoutBtn,
+        dom.apiDataSpan, dom.coreServiceStatusSpan
+    ];
 
-    const navHome = document.getElementById('nav-home');
-    const navOffers = document.getElementById('nav-offers');
-    
-    const userActions = document.getElementById('user-actions');
-    const loginBtn = document.getElementById('login-btn');
-    const registerBtn = document.getElementById('register-btn');
-
-    const userInfo = document.getElementById('user-info');
-    const userEmailSpan = document.getElementById('user-email');
-    const myBookingsBtn = document.getElementById('my-bookings-btn');
-    const logoutBtn = document.getElementById('logout-btn');
-
-    const registerForm = document.getElementById('register-form');
-    const registerMessage = document.getElementById('register-message');
-    const loginForm = document.getElementById('login-form');
-    const loginMessage = document.getElementById('login-message');
-
-    const bookingOfferNameSpan = document.getElementById('booking-offer-name');
-    const bookingOfferIdInput = document.getElementById('booking-offer-id');
-    const bookingForm = document.getElementById('booking-form');
-    const bookingMessage = document.getElementById('booking-message');
-    
-    
-    const bookingDateStartInput = document.getElementById('booking-date-start');
-    const bookingDateEndInput = document.getElementById('booking-date-end');
-    
-    const offersGrid = document.querySelector('#offers-view .offers-grid');
-
-    let currentUser = null;
-
-    
-    function getFormattedDate(date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0'); 
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+    if (criticalDOMElements.some(el => !el)) {
+        console.error(
+            "Krytyczny błąd: Brak co najmniej jednego z podstawowych elementów DOM! " +
+            "Sprawdź ID elementów w pliku index.html oraz poprawność ich selekcji w domElements.js."
+        );
+        document.body.innerHTML = `
+            <p style="color:red; font-size:1.2em; text-align:center; margin-top: 40px;">
+                Wystąpił krytyczny błąd podczas inicjalizacji aplikacji.<br>
+                Sprawdź konsolę przeglądarki, aby uzyskać więcej informacji.
+            </p>`;
+        return; 
     }
 
-    const todayFormatted = getFormattedDate(new Date());
+    initAuth();
 
-    function hideAllViews() {
-        if(homeView) homeView.style.display = 'none';
-        if(offersView) offersView.style.display = 'none';
-        if(registerView) registerView.style.display = 'none';
-        if(loginView) loginView.style.display = 'none';
-        if(bookingView) bookingView.style.display = 'none';
-        if(myBookingsView) myBookingsView.style.display = 'none';
-    }
-
-    function showView(viewElement) {
-        hideAllViews();
-        if(viewElement) viewElement.style.display = 'block';
-    }
-
-    
-    function setupBookingFormDates() {
-        if (bookingDateStartInput) {
-            bookingDateStartInput.min = todayFormatted;
-        }
-        if (bookingDateEndInput) {
-            bookingDateEndInput.min = todayFormatted;
-        }
-    }
-
- 
-    if (bookingDateStartInput && bookingDateEndInput) {
-        bookingDateStartInput.addEventListener('change', () => {
-            const startDate = bookingDateStartInput.value;
-            if (startDate) {
-                bookingDateEndInput.min = startDate; 
-                if (bookingDateEndInput.value && bookingDateEndInput.value < startDate) {
-                    bookingDateEndInput.value = startDate; 
-                }
-            } else {
-                bookingDateEndInput.min = todayFormatted;
-            }
-        });
-    }
-    
-    
-    if(navHome) navHome.addEventListener('click', (e) => {
-        e.preventDefault();
-        showView(homeView);
+    initNavigation({
+        loadOffersCallback: loadOffers,
+        loadMyBookingsCallback: loadMyBookings,
+        getCurrentUserCallback: getCurrentUser
     });
 
-    if(navOffers) navOffers.addEventListener('click', (e) => {
-        e.preventDefault();
-        showView(offersView);
-        loadOffers(); 
-    });
+    initBookingForm();
 
-    if(myBookingsBtn) myBookingsBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (!currentUser) {
-            alert("Musisz być zalogowany, aby zobaczyć swoje rezerwacje.");
-            showView(loginView);
-            return;
-        }
-        showView(myBookingsView);
-        loadMyBookings();
-    });
-    
-    if(registerBtn) registerBtn.addEventListener('click', () => showView(registerView));
-    if(loginBtn) loginBtn.addEventListener('click', () => showView(loginView));
-
-    if(logoutBtn) logoutBtn.addEventListener('click', () => {
-        currentUser = null;
-        localStorage.removeItem('authToken'); 
-        localStorage.removeItem('userEmail');
-        localStorage.removeItem('userId'); 
-        updateUserUI();
-        showView(homeView);
-    });
-    
-    function updateUserUI() {
-        if (currentUser && currentUser.email) {
-            if(userActions) userActions.style.display = 'none';
-            if(userInfo) userInfo.style.display = 'flex';
-            if(userEmailSpan) userEmailSpan.textContent = currentUser.email;
-            if(myBookingsBtn) myBookingsBtn.style.display = 'inline-block';
-        } else {
-            if(userActions) userActions.style.display = 'flex';
-            if(userInfo) userInfo.style.display = 'none';
-            if(userEmailSpan) userEmailSpan.textContent = '';
-            if(myBookingsBtn) myBookingsBtn.style.display = 'none';
-        }
-    }
-    
-    function checkLoginStatus() {
-        const token = localStorage.getItem('authToken');
-        const email = localStorage.getItem('userEmail');
-        const userId = localStorage.getItem('userId'); 
-
-        if (token && email && userId) {
-            currentUser = { email: email, token: token, id: userId }; 
-        } else {
-            currentUser = null; 
-        }
-        updateUserUI();
-    }
-
-    if (registerForm) {
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if(registerMessage) registerMessage.textContent = '';
-            const emailInput = document.getElementById('reg-email');
-            const passwordInput = document.getElementById('reg-password');
-            if (!emailInput || !passwordInput) return;
-            const email = emailInput.value;
-            const password = passwordInput.value;
-            try {
-                const response = await fetch('/api/users/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-                const data = await response.json();
-                if (response.ok) { 
-                    if(registerMessage) {
-                        registerMessage.textContent = `Rejestracja pomyślna! Użytkownik: ${data.user.email}. Możesz się teraz zalogować.`;
-                        registerMessage.style.color = 'green';
-                    }
-                    registerForm.reset();
-                    setTimeout(() => showView(loginView), 2000);
-                } else {
-                    if(registerMessage) {
-                        registerMessage.textContent = `Błąd rejestracji: ${data.message || response.statusText || 'Nieznany błąd'}`;
-                        registerMessage.style.color = 'red';
-                    }
-                }
-            } catch (error) {
-                console.error('Błąd fetch podczas rejestracji:', error);
-                if(registerMessage) {
-                    registerMessage.textContent = 'Wystąpił błąd sieci. Spróbuj ponownie.';
-                    registerMessage.style.color = 'red';
-                }
-            }
-        });
-    }
-    
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if(loginMessage) loginMessage.textContent = '';
-            const emailInput = document.getElementById('login-email');
-            const passwordInput = document.getElementById('login-password');
-            if (!emailInput || !passwordInput) return;
-            const email = emailInput.value;
-            const password = passwordInput.value;
-            try {
-                const response = await fetch('/api/users/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-                const data = await response.json();
-                if (response.ok) { 
-                    if(loginMessage) {
-                        loginMessage.textContent = 'Logowanie pomyślne!';
-                        loginMessage.style.color = 'green';
-                    }
-                    if (data.user && data.user.email && data.token && data.user.id) { 
-                        currentUser = { email: data.user.email, token: data.token, id: data.user.id }; 
-                        localStorage.setItem('authToken', data.token); 
-                        localStorage.setItem('userEmail', data.user.email);
-                        localStorage.setItem('userId', data.user.id); 
-                        updateUserUI();
-                        showView(homeView); 
-                        loginForm.reset();
-                    } else {
-                        console.error("Odpowiedź serwera logowania nie zawiera wszystkich wymaganych pól:", data);
-                        throw new Error("Niekompletne dane logowania z serwera.");
-                    }
-                } else {
-                    if(loginMessage) {
-                        loginMessage.textContent = `Błąd logowania: ${data.message || response.statusText || 'Nieznany błąd'}`;
-                        loginMessage.style.color = 'red';
-                    }
-                    currentUser = null; 
-                    localStorage.removeItem('authToken');
-                    localStorage.removeItem('userEmail');
-                    localStorage.removeItem('userId');
-                    updateUserUI();
-                }
-            } catch (error) {
-                console.error('Błąd fetch podczas logowania:', error);
-                if(loginMessage) {
-                    loginMessage.textContent = `Wystąpił błąd: ${error.message}. Sprawdź konsolę.`;
-                    loginMessage.style.color = 'red';
-                }
-            }
-        });
-    }
-
-    async function loadOffers() {
-        if (!offersGrid) {
-            if(offersView) offersView.innerHTML = "<p>Błąd konfiguracji: Brak kontenera na oferty.</p>";
-            return;
-        }
-        offersGrid.innerHTML = '<p>Ładowanie apartamentów...</p>';
-        try {
-            const response = await fetch('/api/core/items');
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: `HTTP error ${response.status}` }));
-                throw new Error(errorData.message || `Nie udało się pobrać ofert: ${response.statusText}`);
-            }
-            const items = await response.json();
-            renderOffers(items); 
-        } catch (error) {
-            console.error('Błąd podczas ładowania ofert:', error);
-            offersGrid.innerHTML = `<p>Nie udało się załadować ofert apartamentów. Błąd: ${error.message}</p>`;
-        }
-    }
-
-    function renderOffers(items) {
-        if (!offersGrid) return;
-        offersGrid.innerHTML = ''; 
-        if (!items || items.length === 0) {
-            offersGrid.innerHTML = '<p>Obecnie brak dostępnych apartamentów.</p>';
-            return;
-        }
-        items.forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'offer-card';
-            let priceInfo = 'Zapytaj o cenę';
-            if (item.pricePerNight) {
-                priceInfo = `${item.pricePerNight} ${item.currency || ''} / noc`;
-            } else if (item.pricePerHour) {
-                priceInfo = `${item.pricePerHour} ${item.currency || ''} / godzina`;
-            } else if (item.pricePerUnit) {
-                priceInfo = `${item.pricePerUnit} ${item.currency || ''} / szt.`;
-            }
-            card.innerHTML = `
-                <img src="${item.imageUrl || 'https://placehold.co/300x200/EFEFEF/AAAAAA?text=Apartament'}" alt="${item.name || 'Apartament'}" onerror="this.onerror=null;this.src='https://placehold.co/300x200/EFEFEF/AAAAAA?text=Brak+Obrazka';">
-                <h3>${item.name || 'Brak nazwy'}</h3>
-                <p>${item.description || 'Brak opisu.'}</p>
-                <p><strong>Lokalizacja:</strong> ${item.location || 'Nieokreślona'}</p>
-                <p><strong>Cena:</strong> ${priceInfo}</p>
-                <button class="book-now-btn" data-offer-id="${item.id}" data-offer-name="${item.name || 'Apartament'}">Rezerwuj</button>
-            `;
-            offersGrid.appendChild(card);
-        });
-        addEventListenersToBookButtons();
-    }
-
-    function addEventListenersToBookButtons() {
-        const buttons = document.querySelectorAll('#offers-view .offer-card .book-now-btn');
-        buttons.forEach(button => {
-            const newButton = button.cloneNode(true);
-            button.parentNode.replaceChild(newButton, button); 
-            newButton.addEventListener('click', handleBookNowClick); 
-        });
-    }
-
-    function handleBookNowClick() {
-        if (!currentUser) {
-            alert('Musisz być zalogowany, aby dokonać rezerwacji.');
-            showView(loginView);
-            return;
-        }
-        const offerId = this.dataset.offerId;
-        const offerName = this.dataset.offerName; 
-        
-        if(bookingOfferIdInput) bookingOfferIdInput.value = offerId;
-        if(bookingOfferNameSpan) bookingOfferNameSpan.textContent = offerName;
-        if(bookingMessage) bookingMessage.textContent = '';
-        if(bookingForm) bookingForm.reset();
-        
-        setupBookingFormDates(); 
-        showView(bookingView);
-    }
-    
-    if (bookingForm) {
-        bookingForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if(bookingMessage) bookingMessage.textContent = '';
-            if (!currentUser || !currentUser.token) {
-                if(bookingMessage) {
-                    bookingMessage.textContent = 'Błąd: Musisz być zalogowany (brak tokenu).';
-                    bookingMessage.style.color = 'red';
-                }
-                return;
-            }
-            const offerIdInput = document.getElementById('booking-offer-id');
-            const dateStartInput = document.getElementById('booking-date-start'); 
-            const dateEndInput = document.getElementById('booking-date-end');     
-            const guestsInput = document.getElementById('booking-guests');
-            
-            if (!offerIdInput || !dateStartInput || !dateEndInput || !guestsInput) return;
-
-            const offerId = offerIdInput.value;
-            const startDate = dateStartInput.value; 
-            const endDate = dateEndInput.value;
-            const guests = guestsInput.value;
-
-            
-            if (new Date(endDate) < new Date(startDate)) {
-                if(bookingMessage) {
-                    bookingMessage.textContent = 'Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.';
-                    bookingMessage.style.color = 'red';
-                }
-                return;
-            }
-            if (startDate < todayFormatted || endDate < todayFormatted) {
-                 if(bookingMessage) {
-                    bookingMessage.textContent = 'Daty rezerwacji nie mogą być z przeszłości.';
-                    bookingMessage.style.color = 'red';
-                }
-                return;
-            }
-            
-            const bookingApiUrl = '/api/core/bookings'; 
-            try {
-                const response = await fetch(bookingApiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${currentUser.token}` 
-                    },
-                    body: JSON.stringify({
-                        itemId: offerId, 
-                        startDate: startDate,
-                        endDate: endDate,
-                        numberOfGuests: parseInt(guests)
-                    })
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    if(bookingMessage) {
-                        bookingMessage.textContent = `Rezerwacja (${data.booking?.id || ''}) złożona: ${data.message || 'Sukces!'}`;
-                        bookingMessage.style.color = 'green';
-                    }
-                    setTimeout(() => {
-                        showView(myBookingsView);
-                        loadMyBookings(); 
-                    }, 2000);
-                } else {
-                    if(bookingMessage) {
-                        bookingMessage.textContent = `Błąd rezerwacji: ${data.message || response.statusText || 'Nieznany błąd'}`;
-                        bookingMessage.style.color = 'red';
-                    }
-                }
-            } catch (error) {
-                console.error('Błąd fetch podczas składania rezerwacji:', error);
-                if(bookingMessage) {
-                    bookingMessage.textContent = 'Wystąpił błąd sieci podczas składania rezerwacji.';
-                    bookingMessage.style.color = 'red';
-                }
-            }
-        });
-    }
-
-    async function loadMyBookings() {
-        if (!myBookingsList) return;
-        if (!currentUser || !currentUser.token) {
-            myBookingsList.innerHTML = '<p>Musisz być zalogowany, aby zobaczyć swoje rezerwacje.</p>';
-            return;
-        }
-        myBookingsList.innerHTML = '<p>Ładowanie Twoich rezerwacji...</p>';
-        try {
-            const response = await fetch('/api/core/bookings/my', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${currentUser.token}`
-                }
-            });
-            if (response.status === 401 || response.status === 403) {
-                 myBookingsList.innerHTML = '<p>Błąd autoryzacji. Twoja sesja mogła wygasnąć. Spróbuj zalogować się ponownie.</p>';
-                 return;
-            }
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: `Błąd HTTP ${response.status}` }));
-                throw new Error(errorData.message || `Nie udało się pobrać rezerwacji: ${response.statusText}`);
-            }
-            const bookings = await response.json();
-            renderMyBookings(bookings);
-        } catch (error) {
-            console.error('Błąd podczas ładowania moich rezerwacji:', error);
-            myBookingsList.innerHTML = `<p>Nie udało się załadować Twoich rezerwacji. Błąd: ${error.message}</p>`;
-        }
-    }
-
-    function renderMyBookings(bookings) {
-        if (!myBookingsList) return;
-        myBookingsList.innerHTML = ''; 
-        if (!bookings || bookings.length === 0) {
-            myBookingsList.innerHTML = '<p>Nie masz jeszcze żadnych rezerwacji.</p>';
-            return;
-        }
-        const table = document.createElement('table');
-        table.className = 'bookings-table';
-        table.innerHTML = `
-            <thead>
-                <tr>
-                    <th>ID Rezerwacji</th>
-                    <th>ID Oferty</th>
-                    <th>Od</th>
-                    <th>Do</th>
-                    <th>Goście</th>
-                    <th>Status</th>
-                    <th>Data Utworzenia</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        `;
-        const tbody = table.querySelector('tbody');
-        bookings.forEach(booking => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${booking.id || 'Brak'}</td>
-                <td>${booking.item_id || 'Brak'}</td>
-                <td>${booking.start_date ? new Date(booking.start_date).toLocaleDateString('pl-PL') : 'Brak'}</td>
-                <td>${booking.end_date ? new Date(booking.end_date).toLocaleDateString('pl-PL') : 'Brak'}</td>
-                <td>${booking.number_of_guests || 1}</td>
-                <td>${booking.status || 'Nieznany'}</td>
-                <td>${booking.created_at ? new Date(booking.created_at).toLocaleString('pl-PL') : 'Brak'}</td>
-            `;
-            tbody.appendChild(row);
-        });
-        myBookingsList.appendChild(table);
-    }
-
-    const apiDataSpan = document.getElementById('api-data');
-    const coreServiceStatusSpan = document.getElementById('core-service-status');
-
-    if (apiDataSpan) {
-        fetch('/api/status')
-            .then(response => response.ok ? response.json() : Promise.reject(response))
-            .then(data => { apiDataSpan.innerText = data.message; })
-            .catch(error => { apiDataSpan.innerText = 'Błąd API Gateway.'; console.error('Błąd Booking-API status:', error); });
-    }
-    if (coreServiceStatusSpan) {
-        fetch('/api/core/status')
-            .then(response => response.ok ? response.json() : Promise.reject(response))
+    if (dom.apiDataSpan) {
+        api.fetchApiStatus()
             .then(data => {
-                if (data.dependencies && data.dependencies.database) {
-                    coreServiceStatusSpan.innerText = `Core: ${data.message || 'OK'}, DB: ${data.dependencies.database}, RabbitMQ: ${data.dependencies.rabbitmq}, Redis: ${data.dependencies.redis}`;
-                } else {
-                    coreServiceStatusSpan.innerText = data.message || "Status Core Service nieznany";
+                if (dom.apiDataSpan) dom.apiDataSpan.innerText = data.message || 'N/A';
+            })
+            .catch(error => {
+                if (dom.apiDataSpan) dom.apiDataSpan.innerText = 'Błąd API Gateway.';
+                console.error('Błąd pobierania statusu Booking-API:', error.message);
+            });
+    }
+
+    if (dom.coreServiceStatusSpan) {
+        api.fetchCoreStatus()
+            .then(data => {
+                if (dom.coreServiceStatusSpan) {
+                    if (data.message && data.dependencies) {
+                        dom.coreServiceStatusSpan.innerText =
+                            `Core: ${data.message}, DB: ${data.dependencies.database || 'N/A'}, ` +
+                            `RabbitMQ: ${data.dependencies.rabbitmq || 'N/A'}, Redis: ${data.dependencies.redis || 'N/A'}`;
+                    } else {
+                        dom.coreServiceStatusSpan.innerText = data.message || "Status Core Service nieznany";
+                    }
                 }
             })
-            .catch(error => { coreServiceStatusSpan.innerText = 'Błąd Core Service.'; console.error('Błąd Core Service status:', error); });
+            .catch(error => {
+                if (dom.coreServiceStatusSpan) dom.coreServiceStatusSpan.innerText = 'Błąd Core Service.';
+                console.error('Błąd pobierania statusu Core Service:', error.message);
+            });
     }
     
-    checkLoginStatus(); 
-    showView(homeView); 
+    if (dom.homeView) showView(dom.homeView);
 });
