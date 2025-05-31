@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-api
+  labels:
+    app: booking-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: booking-api 
+  template:
+    metadata:
+      labels:
+        app: booking-api
+    spec:
+      containers:
+      - name: booking-api 
+        image: booking_platfrom_booking-api:latest 
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+          name: http 
+          protocol: TCP
+        env:
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: app-config 
+              key: API_GATEWAY_PORT 
+        - name: CORE_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: CORE_SERVICE_URL_INTERNAL
+        - name: USER_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: USER_SERVICE_URL_INTERNAL
+        livenessProbe:
+          httpGet: # Zmieniono z exec na httpGet dla prostoty
+            path: /api/status 
+            port: http
+          initialDelaySeconds: 45 
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/status
+            port: http
+          initialDelaySeconds: 20 
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m" 
+          limits:
+            memory: "128Mi"
+            cpu: "250m" 

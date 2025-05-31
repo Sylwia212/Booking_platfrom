@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  labels:
+    app: user-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      containers:
+      - name: user-service
+        image: booking_platfrom_user-service:latest 
+        imagePullPolicy: IfNotPresent 
+        ports:
+        - containerPort: 3003
+          name: http 
+          protocol: TCP
+        env:
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: app-config 
+              key: USER_SERVICE_PORT 
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DB_HOST_POSTGRES 
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DB_PORT_POSTGRES 
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: POSTGRES_DB 
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials 
+              key: POSTGRES_USER        
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: POSTGRES_PASSWORD    
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets          
+              key: JWT_SECRET           
+        - name: JWT_EXPIRES_IN
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: JWT_EXPIRES_IN       
+        livenessProbe:
+          httpGet:
+            path: /api/status 
+            port: http        
+          initialDelaySeconds: 45 
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/status
+            port: http
+          initialDelaySeconds: 25 
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m" 
+          limits:
+            memory: "256Mi"
+            cpu: "300m"

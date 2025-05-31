@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  labels:
+    app: rabbitmq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  strategy:
+    type: Recreate 
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec: 
+      hostname: myrabbitmq 
+      
+     
+      volumes:
+      - name: rabbitmq-data-volume
+        persistentVolumeClaim:
+          claimName: rabbitmq-pvc 
+      
+      containers:
+      - name: rabbitmq 
+        image: rabbitmq:3-management-alpine 
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5672
+          name: amqp         
+          protocol: TCP
+        - containerPort: 15672
+          name: http-mgmt   
+          protocol: TCP
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-credentials 
+              key: RABBITMQ_USER        
+        - name: RABBITMQ_DEFAULT_PASS 
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-credentials
+              key: RABBITMQ_PASS        
+        
+        livenessProbe:
+          exec:
+            command:
+            - rabbitmq-diagnostics
+            - check_port_connectivity 
+          initialDelaySeconds: 120 
+          periodSeconds: 30
+          timeoutSeconds: 20 
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - rabbitmq-diagnostics
+            - check_running 
+          initialDelaySeconds: 75 
+          periodSeconds: 20 
+          timeoutSeconds: 15 
+          failureThreshold: 3
+        
+        volumeMounts:
+        - name: rabbitmq-data-volume 
+          mountPath: /var/lib/rabbitmq 
+        
+       
+        resources:
+          requests:
+            memory: "512Mi" 
+            cpu: "250m"   
+          limits:
+            memory: "1Gi"   
+            cpu: "1"      

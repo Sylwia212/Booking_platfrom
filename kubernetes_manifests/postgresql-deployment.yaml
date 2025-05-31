@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgresql
+  labels:
+    app: postgresql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql
+  strategy:
+    type: Recreate 
+  template:
+    metadata:
+      labels:
+        app: postgresql
+    spec:
+      containers:
+      - name: postgresql
+        image: postgres:16-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432
+          name: pgsql
+          protocol: TCP
+        env:
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: app-config           
+              key: POSTGRES_DB
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: POSTGRES_PASSWORD
+
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+            - -d
+            - $(POSTGRES_DB)
+            - -h
+            - localhost
+          initialDelaySeconds: 45 
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 5
+
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+            - -d
+            - $(POSTGRES_DB)
+            - -h
+            - localhost
+          initialDelaySeconds: 10 
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+
+        volumeMounts:
+        - name: postgres-storage-volume
+          mountPath: /var/lib/postgresql/data 
+        - name: postgres-init-scripts-volume
+          mountPath: /docker-entrypoint-initdb.d/init-db.sql 
+          subPath: init-db.sql                           
+
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
+      volumes:
+      - name: postgres-storage-volume
+        persistentVolumeClaim:
+          claimName: postgres-pvc 
+      - name: postgres-init-scripts-volume
+        configMap:
+          name: postgres-init-scripts 

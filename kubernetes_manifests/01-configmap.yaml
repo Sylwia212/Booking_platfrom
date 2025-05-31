@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  POSTGRES_DB: "booking_db"
+  DB_HOST_POSTGRES: "postgresql-service"
+  DB_PORT_POSTGRES: "5432"
+
+  REDIS_HOST: "redis-service" 
+  REDIS_PORT: "6379"
+
+  RABBITMQ_HOST: "rabbitmq-service" 
+
+  JWT_EXPIRES_IN: "1h"
+
+  
+  USER_SERVICE_URL_INTERNAL: "http://user-service:3003" 
+  CORE_SERVICE_URL_INTERNAL: "http://booking-core-service:3001"
+
+  
+  USER_SERVICE_PORT: "3003"
+  CORE_SERVICE_PORT: "3001"
+  API_GATEWAY_PORT: "3000"

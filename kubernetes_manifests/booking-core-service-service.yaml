@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking-core-service 
+  labels:
+    app: booking-core-service
+spec:
+  type: ClusterIP
+  selector:
+    app: booking-core-service 
+  ports:
+  - name: http 
+    protocol: TCP
+    port: 3001       
+    targetPort: http 

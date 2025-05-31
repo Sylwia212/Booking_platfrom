@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-ui
+  labels:
+    app: booking-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: booking-ui
+  template:
+    metadata:
+      labels:
+        app: booking-ui
+    spec:
+      containers:
+      - name: booking-ui
+        image: booking_platfrom_booking-ui:latest 
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: / 
+            port: http 
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
