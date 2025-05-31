@@ -13,8 +13,8 @@ app.use((req, res, next) => {
 });
 
 app.use(cors({
-    origin: '*', 
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 console.log('BOOKING-API: CORS middleware configured.');
@@ -55,6 +55,10 @@ const userProxyOptions = {
         if (req.headers.authorization) {
             proxyReq.setHeader('Authorization', req.headers.authorization);
         }
+    
+        if (req.method === 'GET' || req.method === 'DELETE') {
+            proxyReq.removeHeader('Content-Length');
+        }
     },
     onProxyRes: (proxyRes, req, res) => {
         console.log(`BOOKING-API (HPM-User) onProxyRes: Received response: ${proxyRes.statusCode} for '${req.method} ${req.originalUrl}'`);
@@ -64,18 +68,14 @@ const userProxyOptions = {
         if (res && typeof res.status === 'function' && !res.headersSent) {
             res.status(502).json({ message: `Proxy error to user service: ${err.message}` });
         } else if (res && res.headersSent) {
-            console.error('BOOKING-API (HPM-User) onError: Headers already sent. Cannot send error response. Terminating client socket.');
-            if (req.socket && req.socket.writable && !req.socket.destroyed) {
-                req.socket.end();
-            }
+            console.error('BOOKING-API (HPM-User) onError: Headers already sent. Terminating client socket.');
+            if (req.socket && req.socket.writable && !req.socket.destroyed) req.socket.end();
         } else {
-            console.error('BOOKING-API (HPM-User) onError: Response object is unusable or undefined. Terminating client socket if possible.');
-            if (req.socket && req.socket.writable && !req.socket.destroyed) {
-                req.socket.end();
-            }
+            console.error('BOOKING-API (HPM-User) onError: Response object unusable. Terminating client socket if possible.');
+            if (req.socket && req.socket.writable && !req.socket.destroyed) req.socket.end();
         }
     },
-    logLevel: 'warn', 
+    logLevel: 'warn',
 };
 const usersApiProxy = createProxyMiddleware(userProxyOptions);
 app.use('/api/users', usersApiProxy);
@@ -90,6 +90,10 @@ const coreProxyOptions = {
         console.log(`BOOKING-API (HPM-Core) onProxyReq: Proxying '${req.method} ${req.originalUrl}' to '${coreServiceUrl}${proxyReq.path}'`);
         if (req.headers.authorization) {
             proxyReq.setHeader('Authorization', req.headers.authorization);
+            console.log('BOOKING-API (HPM-Core) onProxyReq: Forwarding Authorization header.');
+        }
+        if (req.method === 'GET' || req.method === 'DELETE') {
+            proxyReq.removeHeader('Content-Length');
         }
     },
     onProxyRes: (proxyRes, req, res) => {
@@ -100,22 +104,17 @@ const coreProxyOptions = {
         if (res && typeof res.status === 'function' && !res.headersSent) {
             res.status(502).json({ message: `Proxy error to core service: ${err.message}` });
         } else if (res && res.headersSent) {
-            console.error('BOOKING-API (HPM-Core) onError: Headers already sent. Cannot send error response. Terminating client socket.');
-            if (req.socket && req.socket.writable && !req.socket.destroyed) {
-                req.socket.end();
-            }
+            console.error('BOOKING-API (HPM-Core) onError: Headers already sent. Terminating client socket.');
+            if (req.socket && req.socket.writable && !req.socket.destroyed) req.socket.end();
         } else {
-            console.error('BOOKING-API (HPM-Core) onError: Response object is unusable or undefined. Terminating client socket if possible.');
-            if (req.socket && req.socket.writable && !req.socket.destroyed) {
-                req.socket.end();
-            }
+            console.error('BOOKING-API (HPM-Core) onError: Response object unusable. Terminating client socket if possible.');
+            if (req.socket && req.socket.writable && !req.socket.destroyed) req.socket.end();
         }
     },
-    logLevel: 'warn', 
+    logLevel: 'warn',
 };
 const coreApiProxy = createProxyMiddleware(coreProxyOptions);
 app.use('/api/core', coreApiProxy);
-
 
 app.use(express.json());
 
@@ -127,7 +126,7 @@ app.use((err, req, res, next) => {
             error: process.env.NODE_ENV === 'development' ? (err.stack || err.message) : {}
         });
     } else if (res && res.headersSent) {
-        console.error('BOOKING-API Global Error Handler: Headers already sent, cannot send JSON response.');
+        console.error('BOOKING-API Global Error Handler: Headers already sent.');
         next(err);
     } else {
         console.error('BOOKING-API Global Error Handler: Response object is not available.');

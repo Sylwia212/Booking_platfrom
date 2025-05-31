@@ -1,11 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
-    
-    const contentArea = document.getElementById('content-area');
+        
     const homeView = document.getElementById('home-view');
     const offersView = document.getElementById('offers-view');
     const registerView = document.getElementById('register-view');
     const loginView = document.getElementById('login-view');
     const bookingView = document.getElementById('booking-view');
+    const myBookingsView = document.getElementById('my-bookings-view');
+    const myBookingsList = document.getElementById('my-bookings-list');
 
     const navHome = document.getElementById('nav-home');
     const navOffers = document.getElementById('nav-offers');
@@ -28,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const bookingOfferIdInput = document.getElementById('booking-offer-id');
     const bookingForm = document.getElementById('booking-form');
     const bookingMessage = document.getElementById('booking-message');
-
     
     const offersGrid = document.querySelector('#offers-view .offers-grid');
 
@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(registerView) registerView.style.display = 'none';
         if(loginView) loginView.style.display = 'none';
         if(bookingView) bookingView.style.display = 'none';
+        if(myBookingsView) myBookingsView.style.display = 'none';
     }
 
     function showView(viewElement) {
@@ -58,6 +59,17 @@ document.addEventListener('DOMContentLoaded', () => {
         loadOffers(); 
     });
 
+    if(myBookingsBtn) myBookingsBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!currentUser) {
+            alert("Musisz być zalogowany, aby zobaczyć swoje rezerwacje.");
+            showView(loginView);
+            return;
+        }
+        showView(myBookingsView);
+        loadMyBookings();
+    });
+    
     if(registerBtn) registerBtn.addEventListener('click', () => showView(registerView));
     if(loginBtn) loginBtn.addEventListener('click', () => showView(loginView));
 
@@ -73,12 +85,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateUserUI() {
         if (currentUser && currentUser.email) {
             if(userActions) userActions.style.display = 'none';
-            if(userInfo) userInfo.style.display = 'inline'; 
+            if(userInfo) userInfo.style.display = 'flex'; 
             if(userEmailSpan) userEmailSpan.textContent = currentUser.email;
+            if(myBookingsBtn) myBookingsBtn.style.display = 'inline-block';
         } else {
-            if(userActions) userActions.style.display = 'inline';
+            if(userActions) userActions.style.display = 'flex';
             if(userInfo) userInfo.style.display = 'none';
             if(userEmailSpan) userEmailSpan.textContent = '';
+            if(myBookingsBtn) myBookingsBtn.style.display = 'none';
         }
     }
     
@@ -87,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const email = localStorage.getItem('userEmail');
         const userId = localStorage.getItem('userId'); 
 
-        if (token && email) {
+        if (token && email && userId) {
             currentUser = { email: email, token: token, id: userId }; 
         } else {
             currentUser = null; 
@@ -120,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     setTimeout(() => showView(loginView), 2000);
                 } else {
                     if(registerMessage) {
-                        registerMessage.textContent = `Błąd rejestracji: ${data.message || response.statusText}`;
+                        registerMessage.textContent = `Błąd rejestracji: ${data.message || response.statusText || 'Nieznany błąd'}`;
                         registerMessage.style.color = 'red';
                     }
                 }
@@ -164,12 +178,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         showView(homeView); 
                         loginForm.reset();
                     } else {
-                        console.error("Odpowiedź serwera logowania nie zawiera wszystkich wymaganych pól (user.id, user.email, token):", data);
+                        console.error("Odpowiedź serwera logowania nie zawiera wszystkich wymaganych pól:", data);
                         throw new Error("Niekompletne dane logowania z serwera.");
                     }
                 } else {
                     if(loginMessage) {
-                        loginMessage.textContent = `Błąd logowania: ${data.message || response.statusText}`;
+                        loginMessage.textContent = `Błąd logowania: ${data.message || response.statusText || 'Nieznany błąd'}`;
                         loginMessage.style.color = 'red';
                     }
                     currentUser = null; 
@@ -188,10 +202,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-
     async function loadOffers() {
         if (!offersGrid) {
-            console.error("Element .offers-grid nie znaleziony w #offers-view!");
             if(offersView) offersView.innerHTML = "<p>Błąd konfiguracji: Brak kontenera na oferty.</p>";
             return;
         }
@@ -212,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderOffers(items) {
         if (!offersGrid) return;
-        offersGrid.innerHTML = '';
+        offersGrid.innerHTML = ''; 
 
         if (!items || items.length === 0) {
             offersGrid.innerHTML = '<p>Obecnie brak dostępnych apartamentów.</p>';
@@ -222,7 +234,6 @@ document.addEventListener('DOMContentLoaded', () => {
         items.forEach(item => {
             const card = document.createElement('div');
             card.className = 'offer-card';
-            
             let priceInfo = 'Zapytaj o cenę';
             if (item.pricePerNight) {
                 priceInfo = `${item.pricePerNight} ${item.currency || ''} / noc`;
@@ -231,9 +242,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (item.pricePerUnit) {
                 priceInfo = `${item.pricePerUnit} ${item.currency || ''} / szt.`;
             }
-
             card.innerHTML = `
-                <img src="${item.imageUrl || 'https://placehold.co/300x200/EFEFEF/AAAAAA?text=Apartament'}" alt="${item.name || 'Apartament'}">
+                <img src="${item.imageUrl || 'https://placehold.co/300x200/EFEFEF/AAAAAA?text=Apartament'}" alt="${item.name || 'Apartament'}" onerror="this.onerror=null;this.src='https://placehold.co/300x200/EFEFEF/AAAAAA?text=Brak+Obrazka';">
                 <h3>${item.name || 'Brak nazwy'}</h3>
                 <p>${item.description || 'Brak opisu.'}</p>
                 <p><strong>Lokalizacja:</strong> ${item.location || 'Nieokreślona'}</p>
@@ -242,16 +252,14 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             offersGrid.appendChild(card);
         });
-        addEventListenersToBookButtons(); 
+        addEventListenersToBookButtons();
     }
 
     function addEventListenersToBookButtons() {
         const buttons = document.querySelectorAll('#offers-view .offer-card .book-now-btn');
         buttons.forEach(button => {
-            
             const newButton = button.cloneNode(true);
             button.parentNode.replaceChild(newButton, button); 
-            
             newButton.addEventListener('click', handleBookNowClick); 
         });
     }
@@ -264,7 +272,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const offerId = this.dataset.offerId;
         const offerName = this.dataset.offerName; 
-        
         if(bookingOfferIdInput) bookingOfferIdInput.value = offerId;
         if(bookingOfferNameSpan) bookingOfferNameSpan.textContent = offerName;
         if(bookingMessage) bookingMessage.textContent = '';
@@ -312,16 +319,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
                 if (response.ok) {
                     if(bookingMessage) {
-                        bookingMessage.textContent = `Rezerwacja (${data.booking?.bookingId || ''}) złożona: ${data.message || 'Sukces!'}`;
+                        bookingMessage.textContent = `Rezerwacja (${data.booking?.id || ''}) złożona: ${data.message || 'Sukces!'}`;
                         bookingMessage.style.color = 'green';
                     }
                     setTimeout(() => {
-                        showView(offersView); 
-                        loadOffers(); 
-                    }, 3000);
+                        showView(myBookingsView); 
+                        loadMyBookings(); 
+                    }, 2000);
                 } else {
                     if(bookingMessage) {
-                        bookingMessage.textContent = `Błąd rezerwacji: ${data.message || response.statusText}`;
+                        bookingMessage.textContent = `Błąd rezerwacji: ${data.message || response.statusText || 'Nieznany błąd'}`;
                         bookingMessage.style.color = 'red';
                     }
                 }
@@ -333,6 +340,77 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+    }
+
+    async function loadMyBookings() {
+        if (!myBookingsList) return;
+        if (!currentUser || !currentUser.token) {
+            myBookingsList.innerHTML = '<p>Musisz być zalogowany, aby zobaczyć swoje rezerwacje.</p>';
+            return;
+        }
+        myBookingsList.innerHTML = '<p>Ładowanie Twoich rezerwacji...</p>';
+        try {
+            const response = await fetch('/api/core/bookings/my', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${currentUser.token}`
+                }
+            });
+            if (response.status === 401 || response.status === 403) {
+                 myBookingsList.innerHTML = '<p>Błąd autoryzacji. Twoja sesja mogła wygasnąć. Spróbuj zalogować się ponownie.</p>';
+                 return;
+            }
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: `Błąd HTTP ${response.status}` }));
+                throw new Error(errorData.message || `Nie udało się pobrać rezerwacji: ${response.statusText}`);
+            }
+            const bookings = await response.json();
+            renderMyBookings(bookings);
+        } catch (error) {
+            console.error('Błąd podczas ładowania moich rezerwacji:', error);
+            myBookingsList.innerHTML = `<p>Nie udało się załadować Twoich rezerwacji. Błąd: ${error.message}</p>`;
+        }
+    }
+
+    function renderMyBookings(bookings) {
+        if (!myBookingsList) return;
+        myBookingsList.innerHTML = ''; 
+        if (!bookings || bookings.length === 0) {
+            myBookingsList.innerHTML = '<p>Nie masz jeszcze żadnych rezerwacji.</p>';
+            return;
+        }
+        const table = document.createElement('table');
+        table.className = 'bookings-table';
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th>ID Rezerwacji</th>
+                    <th>ID Oferty</th>
+                    <th>Od</th>
+                    <th>Do</th>
+                    <th>Goście</th>
+                    <th>Status</th>
+                    <th>Data Utworzenia</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        `;
+        const tbody = table.querySelector('tbody');
+        bookings.forEach(booking => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${booking.id || 'Brak'}</td>
+                <td>${booking.item_id || 'Brak'}</td>
+                <td>${booking.start_date ? new Date(booking.start_date).toLocaleDateString('pl-PL') : 'Brak'}</td>
+                <td>${booking.end_date ? new Date(booking.end_date).toLocaleDateString('pl-PL') : 'Brak'}</td>
+                <td>${booking.number_of_guests || 1}</td>
+                <td>${booking.status || 'Nieznany'}</td>
+                <td>${booking.created_at ? new Date(booking.created_at).toLocaleString('pl-PL') : 'Brak'}</td>
+            `;
+            tbody.appendChild(row);
+        });
+        myBookingsList.appendChild(table);
     }
 
     const apiDataSpan = document.getElementById('api-data');
@@ -349,7 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(response => response.ok ? response.json() : Promise.reject(response))
             .then(data => {
                 if (data.dependencies && data.dependencies.database) {
-                    coreServiceStatusSpan.innerText = `Core: ${data.message}, DB: ${data.dependencies.database}, RabbitMQ: ${data.dependencies.rabbitmq}, Redis: ${data.dependencies.redis}`;
+                    coreServiceStatusSpan.innerText = `Core: ${data.message || 'OK'}, DB: ${data.dependencies.database}, RabbitMQ: ${data.dependencies.rabbitmq}, Redis: ${data.dependencies.redis}`;
                 } else {
                     coreServiceStatusSpan.innerText = data.message || "Status Core Service nieznany";
                 }
