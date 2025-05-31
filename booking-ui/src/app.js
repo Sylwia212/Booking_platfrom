@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-        
+    
     const homeView = document.getElementById('home-view');
     const offersView = document.getElementById('offers-view');
     const registerView = document.getElementById('register-view');
@@ -30,10 +30,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const bookingForm = document.getElementById('booking-form');
     const bookingMessage = document.getElementById('booking-message');
     
+    
+    const bookingDateStartInput = document.getElementById('booking-date-start');
+    const bookingDateEndInput = document.getElementById('booking-date-end');
+    
     const offersGrid = document.querySelector('#offers-view .offers-grid');
 
-    let currentUser = null; 
+    let currentUser = null;
+
     
+    function getFormattedDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); 
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    const todayFormatted = getFormattedDate(new Date());
+
     function hideAllViews() {
         if(homeView) homeView.style.display = 'none';
         if(offersView) offersView.style.display = 'none';
@@ -48,6 +62,32 @@ document.addEventListener('DOMContentLoaded', () => {
         if(viewElement) viewElement.style.display = 'block';
     }
 
+    
+    function setupBookingFormDates() {
+        if (bookingDateStartInput) {
+            bookingDateStartInput.min = todayFormatted;
+        }
+        if (bookingDateEndInput) {
+            bookingDateEndInput.min = todayFormatted;
+        }
+    }
+
+ 
+    if (bookingDateStartInput && bookingDateEndInput) {
+        bookingDateStartInput.addEventListener('change', () => {
+            const startDate = bookingDateStartInput.value;
+            if (startDate) {
+                bookingDateEndInput.min = startDate; 
+                if (bookingDateEndInput.value && bookingDateEndInput.value < startDate) {
+                    bookingDateEndInput.value = startDate; 
+                }
+            } else {
+                bookingDateEndInput.min = todayFormatted;
+            }
+        });
+    }
+    
+    
     if(navHome) navHome.addEventListener('click', (e) => {
         e.preventDefault();
         showView(homeView);
@@ -85,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateUserUI() {
         if (currentUser && currentUser.email) {
             if(userActions) userActions.style.display = 'none';
-            if(userInfo) userInfo.style.display = 'flex'; 
+            if(userInfo) userInfo.style.display = 'flex';
             if(userEmailSpan) userEmailSpan.textContent = currentUser.email;
             if(myBookingsBtn) myBookingsBtn.style.display = 'inline-block';
         } else {
@@ -225,12 +265,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderOffers(items) {
         if (!offersGrid) return;
         offersGrid.innerHTML = ''; 
-
         if (!items || items.length === 0) {
             offersGrid.innerHTML = '<p>Obecnie brak dostępnych apartamentów.</p>';
             return;
         }
-
         items.forEach(item => {
             const card = document.createElement('div');
             card.className = 'offer-card';
@@ -272,10 +310,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const offerId = this.dataset.offerId;
         const offerName = this.dataset.offerName; 
+        
         if(bookingOfferIdInput) bookingOfferIdInput.value = offerId;
         if(bookingOfferNameSpan) bookingOfferNameSpan.textContent = offerName;
         if(bookingMessage) bookingMessage.textContent = '';
         if(bookingForm) bookingForm.reset();
+        
+        setupBookingFormDates(); 
         showView(bookingView);
     }
     
@@ -291,15 +332,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             const offerIdInput = document.getElementById('booking-offer-id');
-            const dateStartInput = document.getElementById('booking-date-start');
-            const dateEndInput = document.getElementById('booking-date-end');
+            const dateStartInput = document.getElementById('booking-date-start'); 
+            const dateEndInput = document.getElementById('booking-date-end');     
             const guestsInput = document.getElementById('booking-guests');
+            
             if (!offerIdInput || !dateStartInput || !dateEndInput || !guestsInput) return;
 
             const offerId = offerIdInput.value;
-            const dateStart = dateStartInput.value;
-            const dateEnd = dateEndInput.value;
+            const startDate = dateStartInput.value; 
+            const endDate = dateEndInput.value;
             const guests = guestsInput.value;
+
+            
+            if (new Date(endDate) < new Date(startDate)) {
+                if(bookingMessage) {
+                    bookingMessage.textContent = 'Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.';
+                    bookingMessage.style.color = 'red';
+                }
+                return;
+            }
+            if (startDate < todayFormatted || endDate < todayFormatted) {
+                 if(bookingMessage) {
+                    bookingMessage.textContent = 'Daty rezerwacji nie mogą być z przeszłości.';
+                    bookingMessage.style.color = 'red';
+                }
+                return;
+            }
             
             const bookingApiUrl = '/api/core/bookings'; 
             try {
@@ -311,8 +369,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                     body: JSON.stringify({
                         itemId: offerId, 
-                        startDate: dateStart,
-                        endDate: dateEnd,
+                        startDate: startDate,
+                        endDate: endDate,
                         numberOfGuests: parseInt(guests)
                     })
                 });
@@ -323,7 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         bookingMessage.style.color = 'green';
                     }
                     setTimeout(() => {
-                        showView(myBookingsView); 
+                        showView(myBookingsView);
                         loadMyBookings(); 
                     }, 2000);
                 } else {
