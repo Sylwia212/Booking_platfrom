@@ -1,4 +1,35 @@
-node_modules
-npm-debug.log
-.git
+# Zależności Node.js 
+node_modules/
+npm-debug.log*
+yarn-error.log
+yarn.lock
+package-lock.json 
+
+# Pliki systemowe i edytora
+.DS_Store
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+Thumbs.db
+ehthumbs.db
+
+# Pliki konfiguracyjne środowiska - nie powinny być w obrazie
+*.env
+.env.*
+
+
+# Pliki Git
+.git/
 .gitignore
+
+
+
+# Katalogi z wynikami budowania frontendu 
+dist/
+build/
+out/
+
+# Inne
+coverage/
+*.log

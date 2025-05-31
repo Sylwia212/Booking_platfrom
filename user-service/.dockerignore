@@ -1,0 +1,39 @@
+# Zależności i logi Node.js
+node_modules
+npm-debug.log*
+yarn-error.log
+yarn.lock
+
+# Pliki systemowe i edytora specyficzne dla OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Pliki konfiguracyjne popularnych edytorów i IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Pliki konfiguracyjne środowiska - te pliki nie powinny znaleźć się w obrazie Docker
+*.env
+.env.*
+
+# Pliki i foldery Git
+.git/
+.gitignore
+
+# Dockerfile
+docker-compose.yml
+docker-compose.*.yml
+
+# Pliki tymczasowe, logi aplikacji lub inne generowane pliki, których nie chcesz w obrazie
+logs/
+*.log
+coverage/
+dist/
+build/
+
+# Inne
+.eslintcache
+.prettierrc.js 
