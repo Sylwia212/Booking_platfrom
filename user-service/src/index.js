@@ -18,22 +18,25 @@ if (!JWT_SECRET) {
     console.log(`USER-SERVICE: JWT_SECRET załadowany (długość: ${JWT_SECRET.length}). JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}`);
 }
 
-console.log(`USER-SERVICE: DB_HOST is configured as: ${process.env.DB_HOST || "postgresql"}`);
-const pgClient = new Client({
-  host: process.env.DB_HOST || "postgresql",
-  port: process.env.DB_PORT || 5432,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-});
+const DB_HOST = process.env.DB_HOST || "postgresql-service";
+const DB_PORT = parseInt(process.env.DB_PORT || "5432");
+const DB_USER = process.env.DB_USER;
+const DB_PASSWORD = process.env.DB_PASSWORD;
+const DB_NAME = process.env.DB_NAME;
 
-pgClient
-  .connect()
-  .then(() => console.log("User Service: Połączono z PostgreSQL"))
-  .catch((err) => {
-    console.error("User Service: KRYTYCZNY BŁĄD połączenia z PostgreSQL przy starcie:", err.stack);
+console.log(`USER-SERVICE: Konfiguracja DB: Host=${DB_HOST}, Port=${DB_PORT}, User=${DB_USER ? 'OK' : 'BRAK'}, DBName=${DB_NAME ? 'OK' : 'BRAK'}`);
+if (!DB_USER || !DB_PASSWORD || !DB_NAME) {
+    console.error("USER-SERVICE: KRYTYCZNY BŁĄD - Brak wszystkich zmiennych środowiskowych dla bazy danych (DB_USER, DB_PASSWORD, DB_NAME).");
     process.exit(1);
-  });
+}
+
+const pgClient = new Client({
+  host: DB_HOST,
+  port: DB_PORT,
+  user: DB_USER,
+  password: DB_PASSWORD,
+  database: DB_NAME,
+});
 
 app.use(express.json());
 
@@ -47,8 +50,8 @@ app.get("/api/status", async (req, res) => {
     await pgClient.query('SELECT 1');
     res.status(200).json({ status: "User Service is running", db_status: "Connected" });
   } catch (dbError) {
-    console.error('USER-SERVICE: DB Error in /api/status:', dbError.message);
-    res.status(500).json({ status: "User Service is running", db_status: "Error", error: dbError.message });
+    console.warn('USER-SERVICE: DB Error or not connected in /api/status:', dbError.message);
+    res.status(503).json({ status: "User Service is running", db_status: "Error or Not Connected", error: dbError.message });
   }
 });
 
@@ -77,9 +80,11 @@ app.post("/users/register", async (req, res) => {
     );
     const newUser = newUserResult.rows[0];
     console.log('USER-SERVICE: New user registered:', { id: newUser.id, email: newUser.email });
+    
+    const { password_hash, ...userToReturn } = newUser;
     res.status(201).json({
       message: "User registered successfully.",
-      user: { id: newUser.id, email: newUser.email, created_at: newUser.created_at },
+      user: userToReturn,
     });
   } catch (error) {
     console.error("USER-SERVICE: Error during user registration for email " + email + ":", error.stack);
@@ -113,10 +118,14 @@ app.post("/users/login", async (req, res) => {
     }
 
     const tokenPayload = {
-      userId: user.id, 
+      userId: user.id,
       email: user.email,
     };
 
+    if (!JWT_SECRET) {
+        console.error("USER-SERVICE: KRYTYCZNY BŁĄD w /users/login - JWT_SECRET nie jest dostępny do podpisania tokenu!");
+        return res.status(500).json({ message: "Błąd konfiguracji serwera uniemożliwiający logowanie." });
+    }
     console.log(`USER-SERVICE: Generating token for userId: ${user.id} with secret (length: ${JWT_SECRET.length})`);
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
     console.log(`USER-SERVICE: User ${email} logged in successfully.`);
@@ -137,8 +146,24 @@ app.post("/users/login", async (req, res) => {
 });
 
 app.get("/users/me", (req, res) => {
-  console.log('USER-SERVICE: Handling /users/me (Not Implemented)');
-  res.status(501).json({ message: "Not Implemented: Get Current User" });
+  console.log('USER-SERVICE: Handling /users/me');
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Brak tokenu autoryzacyjnego lub niepoprawny format.' });
+  }
+  const token = authHeader.split(' ')[1];
+  try {
+    if (!JWT_SECRET) {
+        console.error("USER-SERVICE: KRYTYCZNY BŁĄD w /users/me - JWT_SECRET nie jest dostępny do weryfikacji tokenu!");
+        return res.status(500).json({ message: "Błąd konfiguracji serwera." });
+    }
+    const decoded = jwt.verify(token, JWT_SECRET);
+    console.log('USER-SERVICE: /users/me - token valid for userId:', decoded.userId);
+    res.status(200).json({ id: decoded.userId, email: decoded.email });
+  } catch (err) {
+    console.error('USER-SERVICE: /users/me - Invalid or expired token:', err.message);
+    res.status(401).json({ message: 'Nieprawidłowy lub wygasły token.' });
+  }
 });
 
 app.use((err, req, res, next) => {
@@ -149,29 +174,77 @@ app.use((err, req, res, next) => {
       error: process.env.NODE_ENV === 'development' ? (err.stack || err.message) : {}
     });
   } else if (res && res.headersSent) {
-     console.error('USER-SERVICE GLOBAL ERROR HANDLER: Headers already sent.');
+     console.error('USER-SERVICE GLOBAL ERROR HANDLER: Headers already sent, cannot send error response.');
      next(err);
   } else {
-    console.error('USER-SERVICE GLOBAL ERROR HANDLER: Response object is undefined.');
+    console.error('USER-SERVICE GLOBAL ERROR HANDLER: Response object is undefined, cannot send error.');
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`User Service listening on port ${PORT}`);
-});
 
-async function gracefulShutdown() {
-    console.log('User Service: Shutting down...');
-    if (pgClient) {
+async function connectWithRetry(client, maxRetries = 10, delayMs = 5000) {
+    let retries = 0;
+    while (retries < maxRetries) {
         try {
-            await pgClient.end();
-            console.log('User Service: PostgreSQL connection closed.');
-        } catch (e) {
-            console.error('User Service: Error closing PostgreSQL connection:', e.message);
+            await client.connect();
+            console.log("User Service: Połączono z PostgreSQL.");
+            return; 
+        } catch (err) {
+            retries++;
+            console.error(`User Service: Błąd połączenia z PostgreSQL (próba ${retries}/${maxRetries}): ${err.message}`);
+            if (retries >= maxRetries) {
+                console.error("User Service: KRYTYCZNY BŁĄD - Nie udało się połączyć z PostgreSQL po maksymalnej liczbie prób.");
+                throw err; 
+            }
+            console.log(`User Service: Ponowna próba za ${delayMs / 1000}s...`);
+            await new Promise(resolve => setTimeout(resolve, delayMs));
         }
     }
+}
+
+async function startApp() {
+    try {
+        await connectWithRetry(pgClient);
+        
+        const server = app.listen(PORT, () => { 
+            console.log(`User Service nasłuchuje na porcie ${PORT} po pomyślnym połączeniu z DB.`);
+        });
+        app.set('serverInstance', server);
+
+    } catch (error) {
+        console.error("User Service: Nie można uruchomić serwisu z powodu braku połączenia z bazą danych.", error.message);
+        process.exit(1);
+    }
+}
+
+async function gracefulShutdown() {
+    console.log('User Service: Rozpoczęcie zamykania...');
+    
+    const server = app.get('serverInstance');
+    if (server) {
+        console.log('User Service: Zamykanie serwera HTTP...');
+        await new Promise(resolve => server.close(() => {
+            console.log('User Service: Serwer HTTP zamknięty.');
+            resolve();
+        }));
+    }
+
+   
+    if (pgClient && typeof pgClient.end === 'function') {
+        try {
+            await pgClient.end();
+            console.log('User Service: Połączenie PostgreSQL zamknięte.');
+        } catch (e) {
+            console.error('User Service: Błąd podczas zamykania połączenia PostgreSQL:', e.message);
+        }
+    } else {
+        console.log('User Service: Połączenie PostgreSQL nie było aktywne lub klient nie istnieje/nie ma metody end.');
+    }
+    console.log('User Service: Zamykanie zakończone.');
     process.exit(0);
 }
 
 process.on('SIGINT', gracefulShutdown);
 process.on('SIGTERM', gracefulShutdown);
+
+startApp();
