@@ -102,10 +102,10 @@ const authenticateToken = (req, res, next) => {
 };
 
 const allSampleItems = [
-    { id: "apartment_sea_view_01", name: "Apartament z Widokiem na Morze", description: "Luksusowy apartament z dwoma sypialniami i dużym tarasem.", pricePerNight: 550, currency: "PLN", location: "Sopot", type: "apartament", imageUrl: "https://placehold.co/350x250/C1C1C1/6C6C6C?text=Apartament+Morze" },
-    { id: "apartment_city_center_penthouse", name: "Penthouse w Sercu Miasta", description: "Ekskluzywny penthouse z panoramicznym widokiem i prywatnym jacuzzi.", pricePerNight: 1200, currency: "PLN", location: "Warszawa", type: "apartament", imageUrl: "https://placehold.co/350x250/A1A1A1/8E8E8E?text=Penthouse+Centrum" },
-    { id: "apartment_mountain_lodge", name: "Górski Domek Apartamentowy", description: "Przytulny apartament w górach, idealny na zimowy wypoczynek.", pricePerNight: 350, currency: "PLN", location: "Zakopane", type: "apartament", imageUrl: "https://placehold.co/350x250/919191/9F9F9F?text=Górski+Apartament" },
-    { id: "hotel_room_101", name: "Przytulny Pokój Standard", pricePerNight: 180, currency: "PLN", location: "Górki Małe", type: "pokój hotelowy", imageUrl: "https://placehold.co/350x250/E1E1E1/4A4A4A?text=Pokój+Standard" }
+    { id: "apartment_sea_view_01", name: "Apartament z Widokiem na Morze", description: "Luksusowy apartament z dwoma sypialniami i dużym tarasem.", pricePerNight: 550, currency: "PLN", location: "Sopot", type: "apartament", imageUrl: "/images/a1.jpg" },
+    { id: "apartment_city_center_penthouse", name: "Penthouse w Sercu Miasta", description: "Ekskluzywny penthouse z panoramicznym widokiem i prywatnym jacuzzi.", pricePerNight: 1200, currency: "PLN", location: "Warszawa", type: "apartament", imageUrl: "/images/a2.jpg" },
+    { id: "apartment_mountain_lodge", name: "Górski Domek Apartamentowy", description: "Przytulny apartament w górach, idealny na zimowy wypoczynek.", pricePerNight: 350, currency: "PLN", location: "Zakopane", type: "apartament", imageUrl: "/images/a3.jpg" },
+    { id: "hotel_room_101", name: "Przytulny Pokój Standard", pricePerNight: 180, currency: "PLN", location: "Górki Małe", type: "pokój hotelowy", imageUrl: "/images/a4.jpg" }
 ];
 
 app.get("/items", (req, res) => {
