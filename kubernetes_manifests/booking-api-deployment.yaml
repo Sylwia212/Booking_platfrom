@@ -5,7 +5,7 @@ metadata:
   labels:
     app: booking-api
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: booking-api 
@@ -39,7 +39,7 @@ spec:
               name: app-config
               key: USER_SERVICE_URL_INTERNAL
         livenessProbe:
-          httpGet: # Zmieniono z exec na httpGet dla prostoty
+          httpGet: 
             path: /api/status 
             port: http
           initialDelaySeconds: 45 
