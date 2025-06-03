@@ -1,7 +1,7 @@
 import * as dom from "./domElements.js";
 import * as api from "./apiService.js"; 
 import { handleBookNowClick } from "./booking.js"; 
-
+import { getCurrentUser } from "./app.js";
 
 export async function loadOffers() {
   if (!dom.offersGrid) {
@@ -37,6 +37,8 @@ function renderOffers(items) {
     return;
   }
 
+  const currentUser = getCurrentUser();
+
   items.forEach((item) => {
     const card = document.createElement("div");
     card.className = "offer-card";
@@ -51,6 +53,14 @@ function renderOffers(items) {
 
     const imageUrl = item.imageUrl ? item.imageUrl : '/images/fallback-placeholder.png';
 
+
+    let bookingButtonHtml = '';
+    if (currentUser) {
+      bookingButtonHtml = `<button class="book-now-btn" data-offer-id="${item.id}" data-offer-name="${item.name || "Oferta"}">Rezerwuj</button>`;
+    } else {
+      bookingButtonHtml = `<p class="login-to-book-info">Zaloguj się, aby zarezerwować.</p>`;
+    }
+
     card.innerHTML = `
             <img 
                 src="${imageUrl}" 
@@ -61,11 +71,13 @@ function renderOffers(items) {
             <p>${item.description || "Brak opisu."}</p>
             <p><strong>Lokalizacja:</strong> ${item.location || "Nieokreślona"}</p>
             <p><strong>Cena:</strong> ${priceInfo}</p>
-            <button class="book-now-btn" data-offer-id="${item.id}" data-offer-name="${item.name || "Oferta"}">Rezerwuj</button>
+            ${bookingButtonHtml} 
         `;
     dom.offersGrid.appendChild(card);
   });
-  addEventListenersToBookButtons();
+  if (currentUser) {
+    addEventListenersToBookButtons();
+  }
 }
 
 function addEventListenersToBookButtons() {

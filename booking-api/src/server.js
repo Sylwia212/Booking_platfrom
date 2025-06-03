@@ -1,10 +1,10 @@
 const express = require("express");
 const { createProxyMiddleware } = require("http-proxy-middleware");
-const morgan = require("morgan"); 
+const morgan = require("morgan");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const jwksClient = require("jwks-rsa");
-const fetch = require("node-fetch");
+const fetch = require("node-fetch"); 
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,10 +17,9 @@ const CORE_SERVICE_URL =
 const KEYCLOAK_REALM_NAME =
   process.env.KEYCLOAK_REALM_NAME || "booking-app-realm";
 const KEYCLOAK_INTERNAL_URL_BASE =
-  process.env.KEYCLOAK_INTERNAL_URL_BASE || "http://keycloak:8180"; 
+  process.env.KEYCLOAK_INTERNAL_URL_BASE || "http://keycloak:8180";
 const KEYCLOAK_PUBLIC_URL_BASE =
-  process.env.KEYCLOAK_PUBLIC_URL_BASE || "http://localhost:8180"; 
-
+  process.env.KEYCLOAK_PUBLIC_URL_BASE || "http://localhost:8180";
 const KEYCLOAK_INTERNAL_CERTS_URL = `${KEYCLOAK_INTERNAL_URL_BASE}/realms/${KEYCLOAK_REALM_NAME}/protocol/openid-connect/certs`;
 const KEYCLOAK_EXPECTED_ISSUER = `${KEYCLOAK_PUBLIC_URL_BASE}/realms/${KEYCLOAK_REALM_NAME}`;
 
@@ -37,10 +36,10 @@ console.log(
 );
 
 const keycloakJwksClient = jwksClient({
-  jwksUri: KEYCLOAK_INTERNAL_CERTS_URL, 
+  jwksUri: KEYCLOAK_INTERNAL_CERTS_URL,
   cache: true,
   cacheMaxEntries: 5,
-  cacheMaxAge: 10 * 60 * 1000, 
+  cacheMaxAge: 10 * 60 * 1000,
   rateLimit: true,
   jwksRequestsPerMinute: 10,
   fetcher: async (jwksUri) => {
@@ -63,7 +62,7 @@ const keycloakJwksClient = jwksClient({
         `BOOKING-API: Error in JWKS fetcher for ${jwksUri}:`,
         error
       );
-      throw error; 
+      throw error;
     }
   },
 });
@@ -93,10 +92,8 @@ function getKey(header, callback) {
     const signingKey = key.publicKey || key.rsaPublicKey;
     if (!signingKey) {
       console.error(
-        "BOOKING-API: Nie znaleziono klucza publicznego (publicKey or rsaPublicKey) w obiekcie klucza dla kid:",
-        header.kid,
-        "| Key object:",
-        key
+        "BOOKING-API: Nie znaleziono klucza publicznego w obiekcie klucza dla kid:",
+        header.kid
       );
       return callback(
         new Error(
@@ -128,13 +125,10 @@ const authenticateKeycloakToken = (req, res, next) => {
   jwt.verify(
     token,
     getKey,
-    {
-      issuer: KEYCLOAK_EXPECTED_ISSUER, 
-      algorithms: ["RS256"],
-    },
+    { issuer: KEYCLOAK_EXPECTED_ISSUER, algorithms: ["RS256"] },
     (err, decoded) => {
       if (err) {
-        const decodedTokenForIssuer = jwt.decode(token, { complete: true }); 
+        const decodedTokenForIssuer = jwt.decode(token, { complete: true });
         const tokenIssuer = decodedTokenForIssuer?.payload?.iss;
         console.error(
           "BOOKING-API: Auth Error - Nieprawidłowy token Keycloak:",
@@ -147,21 +141,20 @@ const authenticateKeycloakToken = (req, res, next) => {
           KEYCLOAK_EXPECTED_ISSUER
         );
         let errorMessage = "Brak autoryzacji (nieprawidłowy token).";
-        if (err.name === "TokenExpiredError") {
+        if (err.name === "TokenExpiredError")
           errorMessage = "Brak autoryzacji (token wygasł).";
-        } else if (
+        else if (
           err.name === "JsonWebTokenError" &&
           err.message.includes("issuer")
-        ) {
+        )
           errorMessage = `Brak autoryzacji (nieprawidłowy wystawca tokenu: oczekiwano ${KEYCLOAK_EXPECTED_ISSUER}, otrzymano ${
             tokenIssuer || "nieznany"
           }).`;
-        } else if (
+        else if (
           err.name === "JsonWebTokenError" ||
           err.name === "NotBeforeError"
-        ) {
+        )
           errorMessage = `Brak autoryzacji (błąd tokenu: ${err.message}).`;
-        }
         return res
           .status(403)
           .json({
@@ -181,6 +174,7 @@ const authenticateKeycloakToken = (req, res, next) => {
   );
 };
 
+// --- Middleware globalne ---
 app.use(
   cors({
     origin: "*", 
@@ -188,17 +182,21 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-app.use(morgan("dev")); 
-app.use(express.json());
+app.use(morgan("dev"));
+app.use(express.json()); 
 
 const commonOnProxyReq = (proxyReq, req, res) => {
   console.log(
     `BOOKING-API: ==> Proxying Request: ${req.method} ${req.originalUrl} to ${proxyReq.protocol}//${proxyReq.host}${proxyReq.path}`
   );
-
   if (req.user && req.user.sub) {
     proxyReq.setHeader("X-User-ID", req.user.sub);
     if (req.user.email) proxyReq.setHeader("X-User-Email", req.user.email);
+    if (req.user.preferred_username)
+      proxyReq.setHeader("X-User-Name", req.user.preferred_username);
+    if (req.user.realm_access && req.user.realm_access.roles) {
+      proxyReq.setHeader("X-User-Roles", req.user.realm_access.roles.join(","));
+    }
     console.log(
       `BOOKING-API: Added X-User-* headers for Keycloak user: ${req.user.sub}`
     );
@@ -213,20 +211,27 @@ const commonOnProxyReq = (proxyReq, req, res) => {
       "BOOKING-API: Request Body (parsed by express.json, will be re-streamed):",
       bodyData
     );
-
     proxyReq.setHeader("Content-Type", "application/json");
     proxyReq.setHeader("Content-Length", Buffer.byteLength(bodyData));
-
     proxyReq.write(bodyData);
     proxyReq.end();
   } else {
     console.log(
-      "BOOKING-API: No request bodyparsed by express.json, or not a POST/PUT/PATCH. Proxying as is."
+      "BOOKING-API: No request body parsed by express.json, or not a POST/PUT/PATCH. Proxying as is."
     );
   }
-
   console.log(
     "BOOKING-API: Final Request Headers Sent to Upstream:",
+    JSON.stringify(proxyReq.getHeaders(), null, 2)
+  );
+};
+
+const publicOnProxyReq = (proxyReq, req, res) => {
+  console.log(
+    `BOOKING-API (Public): ==> Proxying Request: ${req.method} ${req.originalUrl} to ${proxyReq.protocol}//${proxyReq.host}${proxyReq.path}`
+  );
+  console.log(
+    "BOOKING-API (Public): Final Request Headers Sent to Upstream:",
     JSON.stringify(proxyReq.getHeaders(), null, 2)
   );
 };
@@ -273,8 +278,22 @@ const commonOnError = (serviceName) => (err, req, res, target) => {
       code: err.code,
       details: `Original request: ${req.method} ${req.originalUrl}`,
     });
+  } else if (res && res.headersSent) {
+    console.error(
+      `BOOKING-API: Headers already sent for ${serviceName} error. Cannot send error response to client.`
+    );
+    if (req.socket && req.socket.writable && !req.socket.destroyed)
+      req.socket.end();
+  } else {
+    console.error(
+      `BOOKING-API: Response object not available for proxy error to ${serviceName}. Closing request socket if possible.`
+    );
+    if (req.socket && req.socket.writable && !req.socket.destroyed)
+      req.socket.end();
   }
 };
+
+// --- Definicje tras/proxy ---
 
 app.get("/api/status", (req, res) => {
   console.log("BOOKING-API: /api/status endpoint hit!");
@@ -282,12 +301,25 @@ app.get("/api/status", (req, res) => {
 });
 
 app.use(
+  "/api/core/items",
+  createProxyMiddleware({
+    target: CORE_SERVICE_URL,
+    changeOrigin: true,
+    pathRewrite: { "^/api/core": "" },
+    onProxyReq: publicOnProxyReq,
+    onProxyRes: commonOnProxyRes,
+    onError: commonOnError("core-service (public /items)"),
+    logLevel: process.env.NODE_ENV === "development" ? "debug" : "info",
+  })
+);
+
+app.use(
   "/api/users/me",
   authenticateKeycloakToken,
   createProxyMiddleware({
     target: USER_SERVICE_URL,
     changeOrigin: true,
-    pathRewrite: { "^/api/users": "/users" }, 
+    pathRewrite: { "^/api/users": "/users" },
     onProxyReq: commonOnProxyReq,
     onProxyRes: commonOnProxyRes,
     onError: commonOnError("user-service"),
@@ -302,13 +334,14 @@ app.use(
     target: CORE_SERVICE_URL,
     changeOrigin: true,
     pathRewrite: { "^/api/core": "" },
-    onProxyReq: commonOnProxyReq, 
+    onProxyReq: commonOnProxyReq,
     onProxyRes: commonOnProxyRes,
-    onError: commonOnError("core-service"),
+    onError: commonOnError("core-service (protected core routes)"),
     logLevel: process.env.NODE_ENV === "development" ? "debug" : "info",
   })
 );
 
+// --- Globalny Error Handler dla Express ---
 app.use((err, req, res, next) => {
   console.error(
     "BOOKING-API Global Error Handler:",
@@ -324,7 +357,7 @@ app.use((err, req, res, next) => {
     });
   } else if (res && res.headersSent) {
     console.error("BOOKING-API Global Error Handler: Headers already sent.");
-    if (next) next(err); 
+    if (next) next(err);
   } else {
     console.error(
       "BOOKING-API Global Error Handler: Response object is undefined."
