@@ -11,6 +11,7 @@
     <header>
         <nav>
             <a href="#" id="nav-home">Strona Główna</a>
+            <a href="#" id="nav-admin-panel" style="display:none;">Panel Admina</a>
             <a href="#" id="nav-offers">Oferty</a>
             <span id="user-actions">
                 <button id="login-btn">Zaloguj przez Keycloak</button>
@@ -31,6 +32,16 @@
                 <p>Znajdź i zarezerwuj idealne miejsce dla siebie.</p>
                 <p>Status API Gateway: <span id="api-data">Ładowanie...</span></p>
                 <p>Status Core Service: <span id="core-service-status">Ładowanie...</span></p>
+            </div>
+
+            <div id="admin-view" style="display:none;">
+                <h2>Panel Administracyjny</h2>
+                <p>Witaj w panelu admina, <span id="admin-user-greeting"></span>!</p>
+                <p>Tutaj będą funkcje administracyjne.</p>
+                <div id="admin-actions">
+                    <button id="admin-manage-users-btn">Zarządzaj Użytkownikami (placeholder)</button>
+                    <button id="admin-manage-bookings-btn">Zarządzaj Rezerwacjami (placeholder)</button>
+                </div>
             </div>
 
             <div id="offers-view" style="display:none;">

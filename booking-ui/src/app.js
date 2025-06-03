@@ -223,27 +223,44 @@ async function fetchAndDisplayCoreStatus() {
   }
 }
 
-function loadInitialView() {
-  if (dom.homeView) showView(dom.homeView);
+function loadInitialView() { 
+    if (keycloakAuthenticatedUser) {
+        if (keycloakAuthenticatedUser.roles && keycloakAuthenticatedUser.roles.includes('admin')) {
+            console.log("APP.JS: loadInitialView - Użytkownik jest adminem, pokazuję panel admina.");
+            if (dom.adminView) {
+                showView(dom.adminView);
+                if (dom.adminUserGreeting && keycloakAuthenticatedUser.name) {
+                    dom.adminUserGreeting.textContent = keycloakAuthenticatedUser.name || keycloakAuthenticatedUser.username;
+                }
+            } else if (dom.homeView) { 
+                showView(dom.homeView);
+            }
+        } else {
+            console.log("APP.JS: loadInitialView - Użytkownik jest zalogowany (nie admin), pokazuję oferty.");
+            if (dom.offersView) { 
+                showView(dom.offersView);
+                loadOffers(); 
+            } else if (dom.homeView) { 
+                showView(dom.homeView);
+            }
+        }
+        fetchAndDisplayCoreStatus(); 
+    } else {
+        console.log("APP.JS: loadInitialView - Użytkownik niezalogowany, pokazuję stronę główną.");
+        if (dom.homeView) showView(dom.homeView); 
+        if (dom.coreServiceStatusSpan) dom.coreServiceStatusSpan.innerText = 'Zaloguj się przez Keycloak, aby zobaczyć status Core Service.';
+    }
 
-  if (dom.apiDataSpan) {
-    api
-      .fetchApiStatus()
-      .then((data) => {
-        if (dom.apiDataSpan) dom.apiDataSpan.innerText = data.message || "N/A";
-      })
-      .catch((error) => {
-        if (dom.apiDataSpan) dom.apiDataSpan.innerText = "Błąd API Gateway.";
-        console.error("Błąd pobierania statusu Booking-API:", error.message);
-      });
-  }
-
-  if (!keycloakAuthenticatedUser && dom.coreServiceStatusSpan) {
-    dom.coreServiceStatusSpan.innerText =
-      "Zaloguj się przez Keycloak, aby zobaczyć status Core Service.";
-  } else if (keycloakAuthenticatedUser) {
-    fetchAndDisplayCoreStatus();
-  }
+    if (dom.apiDataSpan) { 
+        api.fetchApiStatus()
+            .then(data => {
+                if (dom.apiDataSpan) dom.apiDataSpan.innerText = data.message || 'N/A';
+            })
+            .catch(error => {
+                if (dom.apiDataSpan) dom.apiDataSpan.innerText = 'Błąd API Gateway.';
+                console.error('Błąd pobierania statusu Booking-API:', error.message);
+            });
+    }
 }
 
 keycloak.onAuthSuccess = async () => {
@@ -270,21 +287,8 @@ keycloak.onAuthSuccess = async () => {
       );
     }
   }
+  loadInitialView();
 
-  fetchAndDisplayCoreStatus();
-
-  if (dom.offersView && dom.offersView.style.display !== "none") {
-    console.log(
-      "APP.JS: onAuthSuccess - Widok ofert aktywny, ładowanie ofert."
-    );
-    loadOffers();
-  }
-  if (dom.myBookingsView && dom.myBookingsView.style.display !== "none") {
-    console.log(
-      "APP.JS: onAuthSuccess - Widok 'Moje Rezerwacje' aktywny, ładowanie moich rezerwacji."
-    );
-    loadMyBookings();
-  }
 };
 
 keycloak.onAuthError = (errorData) => {

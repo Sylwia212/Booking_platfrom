@@ -8,6 +8,7 @@ const allViews = [
   dom.bookingView,
   dom.myBookingsView,
   document.getElementById("admin-view"),
+  dom.adminView
 ].filter((view) => view != null);
 
 export function hideAllViews() {
@@ -47,6 +48,14 @@ export function updateUserUI(keycloakUser) {
     if (dom.logoutBtn) dom.logoutBtn.style.display = "inline-block";
     if (dom.loginBtn) dom.loginBtn.style.display = "none";
     if (dom.registerBtn) dom.registerBtn.style.display = "none";
+
+     if (dom.navAdminPanel) {
+            const isAdmin = keycloakUser.roles && keycloakUser.roles.includes('admin');
+            dom.navAdminPanel.style.display = isAdmin ? 'inline-block' : 'none';
+        }
+    if (dom.adminUserGreeting && keycloakUser.name) {
+        dom.adminUserGreeting.textContent = keycloakUser.name || keycloakUser.username;
+    }
 
     if (adminPanelLink) {
       adminPanelLink.style.display =
@@ -89,16 +98,26 @@ export function initNavigation(callbacks) {
   }
 
   const adminPanelLink = document.getElementById("admin-panel-link");
-  if (adminPanelLink) {
-    adminPanelLink.addEventListener("click", (e) => {
-      e.preventDefault();
-      const adminView = document.getElementById("admin-view");
-      if (adminView) showView(adminView);
-    });
-  }
+  if (dom.navAdminPanel) {
+        dom.navAdminPanel.addEventListener('click', (e) => {
+            e.preventDefault();
+            const user = typeof getCurrentUserCallback === 'function' ? getCurrentUserCallback() : null;
+            if (user && user.roles && user.roles.includes('admin')) {
+                if (dom.adminView) {
+                    showView(dom.adminView);
+                    if (dom.adminUserGreeting && user.name) { 
+                        dom.adminUserGreeting.textContent = user.name || user.username;
+                    }
+                }
+            } else {
+                alert("Brak uprawnień administratora.");
+                if (dom.homeView) showView(dom.homeView);
+            }
+        });
+    }
 
   if (dom.myBookingsBtn) {
-    dom.myBookingsBtn.addEventListener("click", (e) => {
+    dom.myBookingsBtn.addEventListener('click', (e) => {
       e.preventDefault();
       const user =
         typeof getCurrentUserCallback === "function"

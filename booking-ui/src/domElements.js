@@ -5,6 +5,7 @@ export const registerView = document.getElementById('register-view');
 export const loginView = document.getElementById('login-view');
 export const bookingView = document.getElementById('booking-view');
 export const myBookingsView = document.getElementById('my-bookings-view');
+export const adminView = document.getElementById('admin-view');
 
 // Nawigacja i akcje użytkownika
 export const navHome = document.getElementById('nav-home');
@@ -27,6 +28,10 @@ export const loginForm = document.getElementById('login-form');
 export const loginEmailInput = document.getElementById('login-email');
 export const loginPasswordInput = document.getElementById('login-password');
 export const loginMessage = document.getElementById('login-message');
+export const adminUserGreeting = document.getElementById('admin-user-greeting');
+export const adminManageUsersBtn = document.getElementById('admin-manage-users-btn');
+export const adminManageBookingsBtn = document.getElementById('admin-manage-bookings-btn');
+export const navAdminPanel = document.getElementById('nav-admin-panel');
 
 export const bookingOfferNameSpan = document.getElementById('booking-offer-name');
 export const bookingOfferIdInput = document.getElementById('booking-offer-id');
