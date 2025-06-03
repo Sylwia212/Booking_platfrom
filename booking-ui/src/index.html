@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Platforma Rezerwacyjna</title>
+    <script src="http://localhost:8180/js/keycloak.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,11 +13,11 @@
             <a href="#" id="nav-home">Strona Główna</a>
             <a href="#" id="nav-offers">Oferty</a>
             <span id="user-actions">
-                <button id="login-btn">Zaloguj</button>
-                <button id="register-btn">Zarejestruj</button>
+                <button id="login-btn">Zaloguj przez Keycloak</button>
+                <button id="register-btn">Zarejestruj w Keycloak</button>
             </span>
             <span id="user-info" style="display:none;">
-                Witaj, <span id="user-email"></span>!
+                Witaj, <span id="user-email"></span>! 
                 <button id="my-bookings-btn">Moje Rezerwacje</button>
                 <button id="logout-btn">Wyloguj</button>
             </span>
@@ -35,51 +36,27 @@
             <div id="offers-view" style="display:none;">
                 <h2>Dostępne Oferty</h2>
                 <div class="offers-grid">
-                    
                 </div>
             </div>
 
             <div id="register-view" style="display:none;">
                 <h2>Rejestracja</h2>
-                <form id="register-form">
-                    <div>
-                        <label for="reg-email">Email:</label>
-                        <input type="email" id="reg-email" name="email" required>
-                    </div>
-                    <div>
-                        <label for="reg-password">Hasło (min. 6 znaków):</label>
-                        <input type="password" id="reg-password" name="password" required minlength="6">
-                    </div>
-                    <button type="submit">Zarejestruj</button>
-                    <p id="register-message"></p>
-                </form>
+                <form id="register-form"></form>
             </div>
 
             <div id="login-view" style="display:none;">
                 <h2>Logowanie</h2>
-                <form id="login-form">
-                    <div>
-                        <label for="login-email">Email:</label>
-                        <input type="email" id="login-email" name="email" required>
-                    </div>
-                    <div>
-                        <label for="login-password">Hasło:</label>
-                        <input type="password" id="login-password" name="password" required>
-                    </div>
-                    <button type="submit">Zaloguj</button>
-                    <p id="login-message"></p>
-                </form>
+                <form id="login-form"></form>
             </div>
 
             <div id="my-bookings-view" style="display:none;">
                 <h2>Moje Rezerwacje</h2>
                 <div id="my-bookings-list">
                     <p>Ładowanie Twoich rezerwacji...</p>
-                    </div>
+                </div>
             </div>
             
-
-             <div id="booking-view" style="display:none;">
+            <div id="booking-view" style="display:none;">
                 <h2>Rezerwacja Oferty <span id="booking-offer-name"></span></h2>
                 <form id="booking-form">
                     <input type="hidden" id="booking-offer-id" name="offerId">
@@ -99,12 +76,11 @@
                     <p id="booking-message"></p>
                 </form>
             </div>
-
         </section>
     </main>
 
     <footer>
-        <p>&copy; 2025 Platforma Rezerwacyjna. Wszelkie prawa zastrzeżone.</p>
+        <p>© 2025 Platforma Rezerwacyjna. Wszelkie prawa zastrzeżone.</p>
     </footer>
 
     <script type="module" src="app.js"></script>
