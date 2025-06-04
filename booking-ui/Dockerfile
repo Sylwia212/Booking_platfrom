@@ -1,17 +1,22 @@
-# booking-ui/Dockerfile
 FROM nginx:alpine
 
-# Usunięcie domyślnego pliku konfiguracyjnego Nginx, aby nie kolidował z Twoim
-RUN rm /etc/nginx/conf.d/default.conf
+# Obraz nginx:alpine zwykle go nie ma.
+RUN apk add --no-cache gettext
 
-# Kopiujemy Twoją niestandardową konfigurację Nginx
+# Usuń domyślną konfigurację Nginx
+RUN rm -f /etc/nginx/conf.d/default.conf
+
+# Skopiuj swoją konfigurację Nginx
 COPY ./nginx/my-app.conf /etc/nginx/conf.d/my-app.conf
 
-# Kopiujemy pliki Twojej aplikacji frontendowej
-COPY ./src /usr/share/nginx/html
+# Skopiuj pliki aplikacji UI do katalogu tymczasowego /app-src w obrazie
+COPY ./src /app-src
 
-# Odsłaniamy port
+# Skopiuj skrypt startowy
+COPY ./docker-entrypoint-ui.sh /docker-entrypoint-ui.sh
+RUN chmod +x /docker-entrypoint-ui.sh
+
+
 EXPOSE 80
 
-# Domyślna komenda do uruchomienia Nginx w tle (daemon off)
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["/docker-entrypoint-ui.sh"]

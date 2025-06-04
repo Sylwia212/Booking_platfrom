@@ -17,11 +17,18 @@ spec:
       containers:
       - name: booking-ui
         image: booking_platfrom_booking-ui:latest 
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: IfNotPresent 
         ports:
         - containerPort: 80
           name: http
           protocol: TCP
+        env: 
+        - name: APP_KEYCLOAK_URL
+          value: "http://localhost:8181" 
+        - name: APP_KEYCLOAK_REALM
+          value: "booking-app-realm"    
+        - name: APP_KEYCLOAK_CLIENT_ID
+          value: "booking-ui-client"    
         livenessProbe:
           httpGet:
             path: / 
@@ -34,7 +41,7 @@ spec:
           httpGet:
             path: /
             port: http
-          initialDelaySeconds: 5
+          initialDelaySeconds: 5 
           periodSeconds: 10
           timeoutSeconds: 3
           failureThreshold: 3

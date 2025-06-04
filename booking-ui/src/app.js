@@ -6,10 +6,11 @@ import { initBookingForm } from "./booking.js";
 import * as api from "./apiService.js";
 
 const keycloakConfig = {
-  url: "http://localhost:8180/",
-  realm: "booking-app-realm",
-  clientId: "booking-ui-client",
+    url: window.APP_KEYCLOAK_CONFIG?.url || 'http://localhost:8180', 
+    realm: window.APP_KEYCLOAK_CONFIG?.realm || 'booking-app-realm',
+    clientId: window.APP_KEYCLOAK_CONFIG?.clientId || 'booking-ui-client'
 };
+console.log("APP.JS: Używam konfiguracji Keycloak:", keycloakConfig);
 
 if (typeof Keycloak === "undefined") {
   console.error(

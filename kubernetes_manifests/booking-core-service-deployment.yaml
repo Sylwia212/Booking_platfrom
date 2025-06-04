@@ -90,7 +90,7 @@ spec:
               key: JWT_SECRET
         livenessProbe:
           httpGet:
-            path: /api/core/status 
+            path: /status 
             port: http 
           initialDelaySeconds: 60 
           periodSeconds: 20
@@ -98,7 +98,7 @@ spec:
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /api/core/status
+            path: /status
             port: http
           initialDelaySeconds: 30
           periodSeconds: 15

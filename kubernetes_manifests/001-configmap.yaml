@@ -22,3 +22,9 @@ data:
   USER_SERVICE_PORT: "3003"
   CORE_SERVICE_PORT: "3001"
   API_GATEWAY_PORT: "3000"
+
+  
+  KEYCLOAK_INTERNAL_URL_BASE_FOR_API: "http://keycloak-service:8080"
+  KEYCLOAK_PUBLIC_URL_BASE_FOR_API: "http://localhost:8181"
+  KEYCLOAK_REALM_NAME_FOR_API: "booking-app-realm"
+  KEYCLOAK_API_REALM_URL: "http://keycloak-service:8080/realms/booking-app-realm"

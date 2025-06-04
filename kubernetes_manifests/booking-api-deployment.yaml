@@ -38,6 +38,26 @@ spec:
             configMapKeyRef:
               name: app-config
               key: USER_SERVICE_URL_INTERNAL
+        - name: KEYCLOAK_REALM_URL 
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: KEYCLOAK_API_REALM_URL
+        - name: KEYCLOAK_INTERNAL_URL_BASE
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: KEYCLOAK_INTERNAL_URL_BASE_FOR_API
+        - name: KEYCLOAK_PUBLIC_URL_BASE
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: KEYCLOAK_PUBLIC_URL_BASE_FOR_API
+        - name: KEYCLOAK_REALM_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: KEYCLOAK_REALM_NAME_FOR_API
         livenessProbe:
           httpGet: 
             path: /api/status 

@@ -46,7 +46,7 @@ spec:
             command:
             - pg_isready
             - -U
-            - postgres
+            - $(POSTGRES_USER)
             - -d
             - $(POSTGRES_DB)
             - -h
@@ -61,7 +61,7 @@ spec:
             command:
             - pg_isready
             - -U
-            - postgres
+            - $(POSTGRES_USER)
             - -d
             - $(POSTGRES_DB)
             - -h
@@ -74,9 +74,9 @@ spec:
         volumeMounts:
         - name: postgres-storage-volume
           mountPath: /var/lib/postgresql/data 
-        - name: postgres-init-scripts-volume
-          mountPath: /docker-entrypoint-initdb.d/init-db.sql 
-          subPath: init-db.sql                           
+        - name: postgres-init-scripts-volume  
+          mountPath: /docker-entrypoint-initdb.d
+                                   
 
         resources:
           requests:
@@ -90,6 +90,6 @@ spec:
       - name: postgres-storage-volume
         persistentVolumeClaim:
           claimName: postgres-pvc 
-      - name: postgres-init-scripts-volume
+      - name: postgres-init-scripts-volume 
         configMap:
-          name: postgres-init-scripts 
+          name: postgres-init-scripts

@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Platforma Rezerwacyjna</title>
+    <script>
+      window.APP_KEYCLOAK_CONFIG = {
+        url: '${APP_KEYCLOAK_URL}', 
+        realm: '${APP_KEYCLOAK_REALM}', 
+        clientId: '${APP_KEYCLOAK_CLIENT_ID}' 
+      };
+    </script>
     <script src="http://localhost:8180/js/keycloak.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>

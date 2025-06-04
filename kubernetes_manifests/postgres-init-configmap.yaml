@@ -1,11 +1,14 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: postgres-init-scripts 
+  name: postgres-init-scripts
   labels:
     app: postgresql
 data:
-  init-db.sql: | # Użycie | pozwala na wieloliniowy string, zachowując formatowanie SQL
+  01-create-databases.sql: | 
+    CREATE DATABASE keycloak_db;
+
+  02-init-app-tables.sql: |    
     CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
@@ -14,14 +17,15 @@ data:
     );
 
     CREATE TABLE IF NOT EXISTS bookings (
-        id VARCHAR(255) PRIMARY KEY, 
-        item_id VARCHAR(255) NOT NULL,    
-        user_id INTEGER,                                  
+        id VARCHAR(255) PRIMARY KEY,
+        item_id VARCHAR(255) NOT NULL,
+        user_id INTEGER,
         start_date DATE NOT NULL,
         end_date DATE NOT NULL,
         number_of_guests INTEGER DEFAULT 1,
-        status VARCHAR(50) DEFAULT 'PENDING_CONFIRMATION', 
+        status VARCHAR(50) DEFAULT 'PENDING_CONFIRMATION',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_bookings_to_users FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
         CONSTRAINT check_dates CHECK (end_date >= start_date)
     );
 

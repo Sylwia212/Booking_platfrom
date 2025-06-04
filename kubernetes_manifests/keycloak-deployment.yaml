@@ -1,0 +1,143 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  labels:
+    app: keycloak
+spec:
+  replicas: 1 
+  selector:
+    matchLabels:
+      app: keycloak
+  strategy:
+    type: Recreate 
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+      - name: keycloak
+        image: quay.io/keycloak/keycloak:24.0.4 
+        imagePullPolicy: IfNotPresent
+        args: ["start-dev"] 
+        env:
+        - name: KEYCLOAK_ADMIN
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-admin-credentials
+              key: KEYCLOAK_ADMIN
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-admin-credentials
+              key: KEYCLOAK_ADMIN_PASSWORD
+        - name: KC_DB
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_DB
+        - name: KC_DB_URL_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_DB_URL_HOST
+        - name: KC_DB_URL_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_DB_URL_DATABASE
+        - name: KC_DB_USERNAME         
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials 
+              key: POSTGRES_USER
+        - name: KC_DB_PASSWORD         
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: POSTGRES_PASSWORD
+        - name: KC_DB_SCHEMA
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_DB_SCHEMA
+        - name: KC_HOSTNAME_STRICT
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_HOSTNAME_STRICT
+        - name: KC_HOSTNAME_STRICT_HTTPS
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_HOSTNAME_STRICT_HTTPS
+        - name: KC_HTTP_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_HTTP_ENABLED
+        - name: KC_HTTP_PORT           
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_HTTP_PORT
+        - name: KC_PROXY
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_PROXY
+        - name: KC_HOSTNAME_FRONTEND_URL
+          # value: "http://localhost:8181"
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_HOSTNAME_FRONTEND_URL
+        ports:
+        - containerPort: 8080 
+          name: http
+          protocol: TCP
+        volumeMounts:
+        - name: keycloak-data-volume
+          mountPath: /opt/keycloak/data
+        readinessProbe:
+          exec:
+            command: ["/bin/sh", "-c", "exit 0"]
+          initialDelaySeconds: 180 
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 5 
+        livenessProbe:
+          exec:
+            command: ["/bin/sh", "-c", "exit 0"]
+          initialDelaySeconds: 240 
+          periodSeconds: 60
+          timeoutSeconds: 10
+          failureThreshold: 5
+        # readinessProbe: 
+        #   httpGet:
+        #     path: /health/ready 
+        #     port: http
+        #   initialDelaySeconds: 240
+        #   periodSeconds: 20
+        #   timeoutSeconds: 10
+        #   failureThreshold: 6 
+        # livenessProbe:
+        #   httpGet:
+        #     path: /health/live
+        #     port: http
+        #   initialDelaySeconds: 300
+        #   periodSeconds: 30
+        #   timeoutSeconds: 10
+        #   failureThreshold: 5
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1"
+      volumes:
+      - name: keycloak-data-volume
+        persistentVolumeClaim:
+          claimName: keycloak-pvc
